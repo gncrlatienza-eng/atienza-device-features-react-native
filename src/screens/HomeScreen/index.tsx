@@ -1,30 +1,12 @@
 import React, { useRef, useState } from 'react';
-import {
-  Animated,
-  Image,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  UIManager,
-  View,
-} from 'react-native';
+import { Animated, Image, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, TouchableWithoutFeedback, UIManager, View, } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import {
-  ColorScheme,
-  glassTokens,
-  homeScreenStyles as S,
-  palette,
-  sharedStyles as SS,
-} from './HomeScreen.styles';
+import { ColorScheme, glassTokens, homeScreenStyles as S, palette,} from './HomeScreen.styles';
 
 // ─── Android LayoutAnimation ──────────────────────────────────────────────────
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -51,140 +33,37 @@ type NavTab = 'home' | 'favorites';
 const usePressAnimation = (toValue = 0.96) => {
   const scale = useRef(new Animated.Value(1)).current;
 
-  const springConfig = (to: number) => ({
-    toValue: to,
+  const spring = (to: number) => ({
+    toValue:       to,
     useNativeDriver: true,
-    speed: 20,
-    bounciness: 5,
+    speed:         20,
+    bounciness:    5,
   });
 
-  const onPressIn = () =>
-    Animated.spring(scale, springConfig(toValue)).start();
-
-  const onPressOut = (callback?: () => void) =>
-    Animated.spring(scale, springConfig(1)).start(() => callback?.());
+  const onPressIn  = () => Animated.spring(scale, spring(toValue)).start();
+  const onPressOut = (cb?: () => void) =>
+    Animated.spring(scale, spring(1)).start(() => cb?.());
 
   return { scale, onPressIn, onPressOut };
 };
 
-// ─── Component: ImagePlaceholder ─────────────────────────────────────────────
-const ImagePlaceholder: React.FC<{
-  scheme: ColorScheme;
-  size?: number;
-  fill?: boolean;
-}> = ({ scheme, size = 32, fill = false }) => (
-  <View
-    style={[
-      fill ? StyleSheet.absoluteFill : SS.thumbImage,
-      {
-        backgroundColor: scheme === 'dark' ? '#2C2C2E' : '#E5E5EA',
-        alignItems: 'center',
-        justifyContent: 'center',
-      },
-    ]}
-  >
-    <Ionicons
-      name="image-outline"
-      size={size}
-      color={scheme === 'dark' ? '#48484A' : '#C7C7CC'}
-    />
-  </View>
-);
-
-// ─── Component: ThemeToggle ───────────────────────────────────────────────────
-const ThemeToggle: React.FC<{ scheme: ColorScheme }> = ({ scheme }) => {
-  const { resolvedScheme, toggleTheme } = useTheme();
-  const isDark = resolvedScheme === 'dark';
-  const colors = palette[scheme];
-  const translateX = useRef(new Animated.Value(isDark ? 18 : 0)).current;
-
-  const handleToggle = () => {
-    Haptics.selectionAsync();
-    Animated.spring(translateX, {
-      toValue: isDark ? 0 : 18,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
-    }).start();
-    toggleTheme();
-  };
-
-  return (
-    <TouchableOpacity onPress={handleToggle} activeOpacity={0.8}>
-      <View
-        style={[
-          S.toggleTrack,
-          { backgroundColor: isDark ? colors.accent : 'rgba(120, 120, 128, 0.32)' },
-        ]}
-      >
-        <Animated.View style={[S.toggleThumb, { transform: [{ translateX }] }]} />
-      </View>
-    </TouchableOpacity>
-  );
-};
-
-// ─── Component: ProfileDropdown ───────────────────────────────────────────────
-const ProfileDropdown: React.FC<{
-  scheme: ColorScheme;
-  onClose: () => void;
-  onLogout?: () => void;
-}> = ({ scheme, onClose, onLogout }) => {
-  const tokens = glassTokens[scheme];
-  const colors = palette[scheme];
-
-  return (
-    <>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={S.dropdownBackdrop} />
-      </TouchableWithoutFeedback>
-
-      <View style={[S.dropdownWrapper, { borderColor: tokens.border }]}>
-        <BlurView intensity={80} tint={tokens.tint} style={S.dropdownBlur}>
-          <View style={S.dropdownThemeRow}>
-            <Ionicons
-              name={scheme === 'dark' ? 'moon' : 'sunny'}
-              size={18}
-              color={colors.secondaryLabel}
-            />
-            <Text style={[S.dropdownThemeLabel, { color: colors.label }]}>
-              Dark Mode
-            </Text>
-            <ThemeToggle scheme={scheme} />
-          </View>
-
-          <View style={[S.dropdownSeparator, { backgroundColor: colors.separator }]} />
-
-          <TouchableOpacity
-            style={S.dropdownItem}
-            onPress={() => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-              onClose();
-              onLogout?.();
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="log-out-outline" size={18} color={colors.destructive} />
-            <Text style={[S.dropdownItemLabel, { color: colors.destructive }]}>
-              Log Out
-            </Text>
-          </TouchableOpacity>
-        </BlurView>
-      </View>
-    </>
-  );
-};
-
-// ─── Component: BannerCard ────────────────────────────────────────────────────
-const BannerCard: React.FC<{ item: TravelEntry; scheme: ColorScheme }> = ({
+// ─── Component: EntryCard ─────────────────────────────────────────────────────
+const EntryCard: React.FC<{ item: TravelEntry; scheme: ColorScheme }> = ({
   item,
   scheme,
 }) => {
-  const { scale, onPressIn, onPressOut } = usePressAnimation(0.98);
+  const { scale, onPressIn, onPressOut } = usePressAnimation(0.97);
   const tokens = glassTokens[scheme];
+
+  // Derive a short title from address (first segment before comma)
+  const title = item.address.split(',')[0] ?? item.address;
 
   return (
     <Animated.View
-      style={[S.bannerCard, { transform: [{ scale }], borderColor: tokens.border }]}
+      style={[
+        S.entryCard,
+        { transform: [{ scale }], borderColor: tokens.border },
+      ]}
     >
       <TouchableOpacity
         activeOpacity={1}
@@ -192,67 +71,51 @@ const BannerCard: React.FC<{ item: TravelEntry; scheme: ColorScheme }> = ({
         onPressOut={() => onPressOut()}
         style={StyleSheet.absoluteFill}
       >
+        {/* Full-bleed image */}
         {item.imageUri ? (
-          <Image source={{ uri: item.imageUri }} style={S.bannerImage} resizeMode="cover" />
+          <Image
+            source={{ uri: item.imageUri }}
+            style={S.entryImage}
+            resizeMode="cover"
+          />
         ) : (
-          <ImagePlaceholder scheme={scheme} size={52} fill />
+          <View
+            style={[
+              S.entryPlaceholder,
+              { backgroundColor: scheme === 'dark' ? '#1C1C1E' : '#E5E5EA' },
+            ]}
+          >
+            <Ionicons
+              name="image-outline"
+              size={52}
+              color={scheme === 'dark' ? '#3A3A3C' : '#C7C7CC'}
+            />
+          </View>
         )}
 
+        {/* Glassmorphism overlay — text sits directly on image */}
         <BlurView
-          intensity={55}
+          intensity={50}
           tint={tokens.tint}
-          style={[S.bannerOverlay, { borderTopColor: tokens.border }]}
+          style={[S.entryOverlay, { borderTopColor: tokens.border }]}
         >
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: tokens.overlay }]} />
-          <Text style={S.bannerTitle} numberOfLines={1}>{item.address}</Text>
-          <Text style={S.bannerDate}>
+          <View
+            style={[StyleSheet.absoluteFill, { backgroundColor: tokens.overlay }]}
+          />
+          <Text style={S.entryTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <View style={S.entryAddressRow}>
+            <Ionicons name="location" size={12} color="rgba(255,255,255,0.75)" />
+            <Text style={S.entryAddress} numberOfLines={1}>
+              {item.address}
+            </Text>
+          </View>
+          <Text style={S.entryDate}>
             {new Date(item.timestamp).toLocaleDateString('en-US', {
               month: 'long',
               day: 'numeric',
               year: 'numeric',
-            })}
-          </Text>
-        </BlurView>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-};
-
-// ─── Component: ThumbCard ─────────────────────────────────────────────────────
-const ThumbCard: React.FC<{ item: TravelEntry; scheme: ColorScheme }> = ({
-  item,
-  scheme,
-}) => {
-  const { scale, onPressIn, onPressOut } = usePressAnimation(0.96);
-  const tokens = glassTokens[scheme];
-
-  return (
-    <Animated.View
-      style={[SS.thumbCard, { transform: [{ scale }], borderColor: tokens.border }]}
-    >
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={onPressIn}
-        onPressOut={() => onPressOut()}
-        style={StyleSheet.absoluteFill}
-      >
-        {item.imageUri ? (
-          <Image source={{ uri: item.imageUri }} style={SS.thumbImage} resizeMode="cover" />
-        ) : (
-          <ImagePlaceholder scheme={scheme} />
-        )}
-
-        <BlurView
-          intensity={55}
-          tint={tokens.tint}
-          style={[SS.thumbOverlay, { borderTopColor: tokens.border }]}
-        >
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: tokens.overlay }]} />
-          <Text style={SS.thumbTitle} numberOfLines={2}>{item.address}</Text>
-          <Text style={SS.thumbDate}>
-            {new Date(item.timestamp).toLocaleDateString('en-US', {
-              month: 'short',
-              day: 'numeric',
             })}
           </Text>
         </BlurView>
@@ -277,7 +140,6 @@ const EmptyState: React.FC<{ scheme: ColorScheme }> = ({ scheme }) => {
           <Ionicons name="map-outline" size={64} color={colors.tertiaryLabel} />
         </View>
       </BlurView>
-
       <Text style={[S.emptyTitle, { color: colors.label }]}>No Memories Yet</Text>
       <Text style={[S.emptyBody, { color: colors.label }]}>
         Start your travel diary by adding your first memory below.
@@ -301,8 +163,6 @@ const CTAButton: React.FC<{
     ? scheme === 'dark' ? 'rgba(10, 132, 255, 0.25)' : 'rgba(0, 122, 255, 0.12)'
     : scheme === 'dark' ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.06)';
 
-  const labelColor = isPrimary ? colors.accent : colors.label;
-
   return (
     <Animated.View style={[S.ctaWrapper, { transform: [{ scale }] }]}>
       <TouchableOpacity
@@ -318,7 +178,14 @@ const CTAButton: React.FC<{
           tint={tokens.tint}
           style={[S.ctaBlur, { backgroundColor: background }]}
         >
-          <Text style={[S.ctaLabel, { color: labelColor }]}>{label}</Text>
+          <Text
+            style={[
+              S.ctaLabel,
+              { color: isPrimary ? colors.accent : colors.label },
+            ]}
+          >
+            {label}
+          </Text>
         </BlurView>
       </TouchableOpacity>
     </Animated.View>
@@ -363,14 +230,116 @@ const SearchBar: React.FC<{
   );
 };
 
+// ─── Component: ThemeToggle ───────────────────────────────────────────────────
+const ThemeToggle: React.FC<{ scheme: ColorScheme }> = ({ scheme }) => {
+  const { resolvedScheme, toggleTheme } = useTheme();
+  const isDark   = resolvedScheme === 'dark';
+  const colors   = palette[scheme];
+  const translateX = useRef(new Animated.Value(isDark ? 18 : 0)).current;
+
+  const handleToggle = () => {
+    Haptics.selectionAsync();
+    Animated.spring(translateX, {
+      toValue:       isDark ? 0 : 18,
+      useNativeDriver: true,
+      speed:         20,
+      bounciness:    6,
+    }).start();
+    toggleTheme();
+  };
+
+  return (
+    <TouchableOpacity onPress={handleToggle} activeOpacity={0.8}>
+      <View
+        style={[
+          S.toggleTrack,
+          {
+            backgroundColor: isDark
+              ? colors.accent
+              : 'rgba(120, 120, 128, 0.32)',
+          },
+        ]}
+      >
+        <Animated.View
+          style={[S.toggleThumb, { transform: [{ translateX }] }]}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ─── Component: ProfileDropdown ───────────────────────────────────────────────
+const ProfileDropdown: React.FC<{
+  scheme: ColorScheme;
+  onClose: () => void;
+  onLogout?: () => void;
+}> = ({ scheme, onClose, onLogout }) => {
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  return (
+    <>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={S.dropdownBackdrop} />
+      </TouchableWithoutFeedback>
+
+      <View style={[S.dropdownWrapper, { borderColor: tokens.border }]}>
+        <BlurView intensity={80} tint={tokens.tint} style={S.dropdownBlur}>
+          {/* Theme toggle row */}
+          <View style={S.dropdownThemeRow}>
+            <Ionicons
+              name={scheme === 'dark' ? 'moon' : 'sunny'}
+              size={18}
+              color={colors.secondaryLabel}
+            />
+            <Text style={[S.dropdownThemeLabel, { color: colors.label }]}>
+              Dark Mode
+            </Text>
+            <ThemeToggle scheme={scheme} />
+          </View>
+
+          <View
+            style={[
+              S.dropdownSeparator,
+              { backgroundColor: colors.separator },
+            ]}
+          />
+
+          {/* Logout row */}
+          <TouchableOpacity
+            style={S.dropdownItem}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Warning,
+              );
+              onClose();
+              onLogout?.();
+            }}
+          >
+            <Ionicons
+              name="log-out-outline"
+              size={18}
+              color={colors.destructive}
+            />
+            <Text style={[S.dropdownItemLabel, { color: colors.destructive }]}>
+              Log Out
+            </Text>
+          </TouchableOpacity>
+        </BlurView>
+      </View>
+    </>
+  );
+};
+
 // ─── Component: FloatingCapsuleNav ────────────────────────────────────────────
 interface FloatingCapsuleNavProps {
-  activeTab: NavTab;
-  scheme: ColorScheme;
-  bottomInset: number;
-  onTabPress: (tab: NavTab) => void;
-  onAddPress: () => void;
-  onSearchPress: () => void;
+  activeTab:      NavTab;
+  scheme:         ColorScheme;
+  bottomInset:    number;
+  onTabPress:     (tab: NavTab) => void;
+  onAddPress:     () => void;
+  onSearchPress:  () => void;
 }
 
 const FloatingCapsuleNav: React.FC<FloatingCapsuleNavProps> = ({
@@ -383,35 +352,44 @@ const FloatingCapsuleNav: React.FC<FloatingCapsuleNavProps> = ({
 }) => {
   const tokens = glassTokens[scheme];
   const colors = palette[scheme];
-  const { scale: plusScale, onPressIn: plusIn, onPressOut: plusOut } = usePressAnimation(0.92);
+  const { scale: plusScale, onPressIn: plusIn, onPressOut: plusOut } =
+    usePressAnimation(0.92);
 
-  // Sits 16pt above the home indicator
-  const navBottom = bottomInset + 16;
+  const navBottom = bottomInset > 0 ? bottomInset - 8 : 12;
 
   const NavButton: React.FC<{
-    tab: NavTab;
-    iconName: keyof typeof Ionicons.glyphMap;
+    tab:            NavTab;
+    iconName:       keyof typeof Ionicons.glyphMap;
     iconNameActive: keyof typeof Ionicons.glyphMap;
-    label: string;
+    label:          string;
   }> = ({ tab, iconName, iconNameActive, label }) => {
     const isActive = activeTab === tab;
     return (
       <TouchableOpacity
         style={S.navItemWrapper}
+        activeOpacity={0.7}
         onPress={() => {
           Haptics.selectionAsync();
           onTabPress(tab);
         }}
-        activeOpacity={0.7}
       >
-        <BlurView intensity={isActive ? 40 : 0} tint={tokens.tint} style={S.navIconButton}>
+        <BlurView
+          intensity={isActive ? 35 : 0}
+          tint={tokens.tint}
+          style={S.navIconButton}
+        >
           <Ionicons
             name={isActive ? iconNameActive : iconName}
-            size={22}
+            size={20}
             color={isActive ? colors.accent : colors.tertiaryLabel}
           />
         </BlurView>
-        <Text style={[S.navLabel, { color: isActive ? colors.accent : colors.tertiaryLabel }]}>
+        <Text
+          style={[
+            S.navLabel,
+            { color: isActive ? colors.accent : colors.tertiaryLabel },
+          ]}
+        >
           {label}
         </Text>
       </TouchableOpacity>
@@ -419,45 +397,53 @@ const FloatingCapsuleNav: React.FC<FloatingCapsuleNavProps> = ({
   };
 
   return (
-    <View style={[S.navWrapper, { borderColor: tokens.navBorder, bottom: navBottom }]}>
-      <BlurView intensity={25} tint={tokens.tint} style={S.navBlur}>
-        <NavButton tab="home" iconName="home-outline" iconNameActive="home" label="Home" />
+    <View
+      style={[
+        S.navWrapper,
+        { borderColor: tokens.navBorder, bottom: navBottom },
+      ]}
+    >
+      {/* Liquid Glass capsule nav */}
+      <BlurView intensity={40} tint={tokens.tint} style={S.navBlur}>
+        <NavButton tab="home"      iconName="home-outline"  iconNameActive="home"  label="Home"      />
         <NavButton tab="favorites" iconName="heart-outline" iconNameActive="heart" label="Favorites" />
 
-        {/* Plus Button */}
-        <Animated.View
-          style={[
-            S.plusButton,
-            { transform: [{ scale: plusScale }], borderColor: tokens.border },
-          ]}
-        >
-          <TouchableOpacity
-            activeOpacity={1}
-            onPressIn={plusIn}
-            onPressOut={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              plusOut(onAddPress);
-            }}
-            style={StyleSheet.absoluteFill}
-          >
-            <BlurView intensity={60} tint={tokens.tint} style={S.plusBlur}>
-              <Ionicons name="add" size={26} color={colors.label} />
-            </BlurView>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Search Button */}
+        {/* Add Button — identical structure to NavButton */}
         <TouchableOpacity
           style={S.navItemWrapper}
+          activeOpacity={0.7}
+          onPressIn={plusIn}
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            plusOut(onAddPress);
+          }}
+        >
+          <Animated.View
+            style={[
+              S.plusButton,
+              { transform: [{ scale: plusScale }], borderColor: tokens.border },
+            ]}
+          >
+            <BlurView intensity={50} tint={tokens.tint} style={S.plusBlur}>
+              <Ionicons name="add" size={20} color={colors.label} />
+            </BlurView>
+          </Animated.View>
+          <Text style={[S.navLabel, { color: colors.tertiaryLabel }]}>Add</Text>
+        </TouchableOpacity>
+
+        {/* Search Button — identical structure to NavButton */}
+        <TouchableOpacity
+          style={S.navItemWrapper}
+          activeOpacity={0.7}
           onPress={() => {
             Haptics.selectionAsync();
             onSearchPress();
           }}
-          activeOpacity={0.7}
         >
-          <BlurView intensity={0} tint={tokens.tint} style={S.searchIconButton}>
+          <View style={S.searchNavButton}>
             <Ionicons name="search" size={20} color={colors.tertiaryLabel} />
-          </BlurView>
+          </View>
+          <Text style={[S.navLabel, { color: colors.tertiaryLabel }]}>Search</Text>
         </TouchableOpacity>
       </BlurView>
     </View>
@@ -466,27 +452,22 @@ const FloatingCapsuleNav: React.FC<FloatingCapsuleNavProps> = ({
 
 // ─── Screen: HomeScreen ───────────────────────────────────────────────────────
 const HomeScreen: React.FC<HomeScreenProps> = ({ entries, onAddEntry, onLogout }) => {
-  const { resolvedScheme } = useTheme();
-  const scheme: ColorScheme  = resolvedScheme;
-  const colors               = palette[scheme];
-  const tokens               = glassTokens[scheme];
-  const insets               = useSafeAreaInsets();
+  const { resolvedScheme }  = useTheme();
+  const scheme: ColorScheme = resolvedScheme;
+  const colors              = palette[scheme];
+  const tokens              = glassTokens[scheme];
+  const insets              = useSafeAreaInsets();
 
-  const [activeTab,     setActiveTab]     = useState<NavTab>('home');
-  const [searchQuery,   setSearchQuery]   = useState('');
-  const [showSearch,    setShowSearch]    = useState(false);
-  const [showDropdown,  setShowDropdown]  = useState(false);
+  const [activeTab,    setActiveTab]    = useState<NavTab>('home');
+  const [searchQuery,  setSearchQuery]  = useState('');
+  const [showSearch,   setShowSearch]   = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   const filteredEntries = searchQuery.trim()
-    ? entries.filter((e) => e.address.toLowerCase().includes(searchQuery.toLowerCase()))
+    ? entries.filter((e) =>
+        e.address.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
     : entries;
-
-  const bannerEntry  = filteredEntries[0] ?? null;
-  const thumbEntries = filteredEntries.slice(1);
-  const thumbRows: TravelEntry[][] = [];
-  for (let i = 0; i < thumbEntries.length; i += 2) {
-    thumbRows.push(thumbEntries.slice(i, i + 2));
-  }
 
   const handleSearchToggle = () => {
     setShowSearch((prev) => !prev);
@@ -504,18 +485,21 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ entries, onAddEntry, onLogout }
         {/* Header */}
         <View style={S.headerWrapper}>
           <View style={S.headerTop}>
-            <Text style={[S.headerTitle, { color: colors.label }]}>Travel Diary</Text>
+            <Text style={[S.headerTitle, { color: colors.label }]}>
+              Travel Diary
+            </Text>
 
-            {/* Liquid Glass Avatar */}
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={() => {
                 Haptics.selectionAsync();
                 setShowDropdown((prev) => !prev);
               }}
-              activeOpacity={0.8}
             >
               <View style={S.avatarButton}>
-                <Text style={[S.avatarInitials, { color: colors.accent }]}>GA</Text>
+                <Text style={[S.avatarInitials, { color: colors.accent }]}>
+                  GA
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -529,7 +513,11 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ entries, onAddEntry, onLogout }
 
         {/* Search Bar */}
         {showSearch && (
-          <SearchBar scheme={scheme} value={searchQuery} onChange={setSearchQuery} />
+          <SearchBar
+            scheme={scheme}
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
         )}
 
         {/* Content */}
@@ -545,23 +533,17 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ entries, onAddEntry, onLogout }
           </>
         ) : (
           <>
-            <Text style={[S.sectionTitle, { color: colors.label }]}>Up Next</Text>
-            {bannerEntry && <BannerCard item={bannerEntry} scheme={scheme} />}
-
-            <CTAButton label="Add New Memory" scheme={scheme} onPress={onAddEntry} />
-
-            {thumbRows.length > 0 && (
-              <>
-                <Text style={[S.sectionTitle, { color: colors.label }]}>All Memories</Text>
-                {thumbRows.map((row, rowIndex) => (
-                  <View key={rowIndex} style={S.thumbRow}>
-                    {row.map((item) => (
-                      <ThumbCard key={item.id} item={item} scheme={scheme} />
-                    ))}
-                  </View>
-                ))}
-              </>
-            )}
+            <Text style={[S.sectionTitle, { color: colors.label }]}>
+              Memories
+            </Text>
+            {filteredEntries.map((item) => (
+              <EntryCard key={item.id} item={item} scheme={scheme} />
+            ))}
+            <CTAButton
+              label="Add New Memory"
+              scheme={scheme}
+              onPress={onAddEntry}
+            />
           </>
         )}
       </ScrollView>

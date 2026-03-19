@@ -3,26 +3,24 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 const { width } = Dimensions.get('window');
 
 // ─── Layout Constants ─────────────────────────────────────────────────────────
-export const CARD_WIDTH  = (width - 48) / 2;
-export const CARD_HEIGHT = 180;
-export const BORDER_RADIUS = 18;
+export const CARD_WIDTH  = width - 32;
+export const CARD_HEIGHT = 220;
+export const BORDER_RADIUS = 20;
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
 export const glassTokens = {
   light: {
     background:    'rgba(255, 255, 255, 0.45)',
     border:        'rgba(255, 255, 255, 0.70)',
-    overlay:       'rgba(255, 255, 255, 0.20)',
-    navBackground: 'rgba(240, 240, 245, 0.55)',
-    navBorder:     'rgba(200, 200, 210, 0.50)',
+    overlay:       'rgba(255, 255, 255, 0.18)',
+    navBorder:     'rgba(160, 160, 170, 0.35)',
     tint:          'light' as const,
   },
   dark: {
     background:    'rgba(28, 28, 32, 0.60)',
     border:        'rgba(255, 255, 255, 0.10)',
-    overlay:       'rgba(0, 0, 0, 0.28)',
-    navBackground: 'rgba(30, 30, 35, 0.55)',
-    navBorder:     'rgba(255, 255, 255, 0.12)',
+    overlay:       'rgba(0, 0, 0, 0.32)',
+    navBorder:     'rgba(255, 255, 255, 0.20)',
     tint:          'dark' as const,
   },
 } as const;
@@ -60,50 +58,14 @@ export const createShadow = (
   offsetY = 4,
 ) =>
   Platform.select({
-    ios:     { shadowColor: color, shadowOffset: { width: 0, height: offsetY }, shadowOpacity: opacity, shadowRadius: radius },
+    ios: {
+      shadowColor:   color,
+      shadowOffset:  { width: 0, height: offsetY },
+      shadowOpacity: opacity,
+      shadowRadius:  radius,
+    },
     android: { elevation: Math.round(radius / 2) },
   });
-
-// ─── Shared Styles ────────────────────────────────────────────────────────────
-export const sharedStyles = StyleSheet.create({
-  thumbCard: {
-    width: CARD_WIDTH,
-    height: CARD_HEIGHT,
-    borderRadius: BORDER_RADIUS,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    ...createShadow(),
-  },
-
-  thumbImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
-
-  thumbOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-
-  thumbTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
-  },
-
-  thumbDate: {
-    fontSize: 11,
-    color: 'rgba(255, 255, 255, 0.65)',
-    marginTop: 2,
-  },
-});
 
 // ─── HomeScreen Styles ────────────────────────────────────────────────────────
 export const homeScreenStyles = StyleSheet.create({
@@ -112,6 +74,7 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   scrollContent: {
+    paddingTop: 8,
     paddingBottom: 160,
   },
 
@@ -119,14 +82,14 @@ export const homeScreenStyles = StyleSheet.create({
   headerWrapper: {
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 6,
+    paddingBottom: 12,
   },
 
   headerTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 2,
+    marginBottom: 4,
   },
 
   headerTitle: {
@@ -137,18 +100,16 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   headerSubtitle: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '400',
     letterSpacing: -0.08,
-    marginBottom: 20,
   },
 
-  // Liquid Glass Avatar — 44×44
+  // Liquid Glass Avatar
   avatarButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    overflow: 'hidden',
     borderWidth: 0.5,
     borderColor: 'rgba(0, 0, 0, 0.12)',
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
@@ -219,7 +180,6 @@ export const homeScreenStyles = StyleSheet.create({
     marginHorizontal: 16,
   },
 
-  // Minimalistic toggle pill
   toggleTrack: {
     width: 44,
     height: 26,
@@ -236,7 +196,69 @@ export const homeScreenStyles = StyleSheet.create({
     ...createShadow('#000', 0.20, 4, 2),
   },
 
-  // ── Sections ──────────────────────────────────────────────────────────────────
+  // ── Entry Card (full-width, image fill with glass overlay) ────────────────────
+  entryCard: {
+    width: CARD_WIDTH,
+    height: CARD_HEIGHT,
+    borderRadius: BORDER_RADIUS,
+    overflow: 'hidden',
+    alignSelf: 'center',
+    marginBottom: 16,
+    borderWidth: 0.5,
+    ...createShadow('#000', 0.14, 20, 6),
+  },
+
+  entryImage: {
+    ...StyleSheet.absoluteFillObject,
+  },
+
+  entryPlaceholder: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Glass text overlay at card bottom
+  entryOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: 0.5,
+  },
+
+  entryTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+    marginBottom: 4,
+  },
+
+  entryAddressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 3,
+  },
+
+  entryAddress: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.85)',
+    letterSpacing: -0.1,
+    flex: 1,
+  },
+
+  entryDate: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.60)',
+  },
+
+  // ── Section Title ─────────────────────────────────────────────────────────────
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -246,57 +268,10 @@ export const homeScreenStyles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  // ── Banner Card ───────────────────────────────────────────────────────────────
-  bannerCard: {
-    height: 200,
-    marginHorizontal: 16,
-    marginBottom: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-    ...createShadow('#000', 0.12, 16, 6),
-  },
-
-  bannerImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
-  },
-
-  bannerOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-
-  bannerTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: -0.3,
-  },
-
-  bannerDate: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.70)',
-    marginTop: 3,
-  },
-
-  // ── Thumbnail Grid ────────────────────────────────────────────────────────────
-  thumbRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 12,
-  },
-
   // ── CTA Button ────────────────────────────────────────────────────────────────
   ctaWrapper: {
     marginHorizontal: 16,
-    marginTop: 20,
+    marginTop: 8,
     borderRadius: 100,
     overflow: 'hidden',
     ...createShadow('#000', 0.10, 10, 4),
@@ -355,7 +330,7 @@ export const homeScreenStyles = StyleSheet.create({
   // ── Search Bar ────────────────────────────────────────────────────────────────
   searchWrapper: {
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 12,
     borderRadius: 14,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
@@ -379,33 +354,33 @@ export const homeScreenStyles = StyleSheet.create({
   navWrapper: {
     position: 'absolute',
     alignSelf: 'center',
-    borderRadius: 50,
+    borderRadius: 40,
     overflow: 'hidden',
-    borderWidth: 0.5,
-    ...createShadow('#000', 0.18, 24, 8),
+    borderWidth: 0.8,
+    ...createShadow('#000', 0.10, 28, 6),
   },
 
   navBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
 
   navItemWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    width: 72,
+    paddingVertical: 4,
   },
 
   navIconButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    overflow: 'hidden',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
 
   navLabel: {
@@ -416,24 +391,26 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   plusButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginHorizontal: 4,
     borderWidth: 0.5,
-  },
-
-  plusBlur: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  searchIconButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+  plusBlur: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  searchNavButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
