@@ -1,27 +1,30 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  Image,
-  TouchableOpacity,
   Animated,
+  Image,
   Platform,
-  UIManager,
-  useColorScheme,
+  ScrollView,
   StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  UIManager,
+  View,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
 import {
-  homeScreenStyles,
-  sharedStyles,
-  glassTokens,
-  palette,
   ColorScheme,
+  glassTokens,
+  homeScreenStyles as S,
+  palette,
+  sharedStyles as SS,
 } from './HomeScreen.styles';
 
-// ─── Enable LayoutAnimation on Android ────────────────────────────────────────
+// ─── Android LayoutAnimation ──────────────────────────────────────────────────
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -37,90 +40,179 @@ export interface TravelEntry {
 interface HomeScreenProps {
   entries: TravelEntry[];
   onAddEntry: () => void;
+  onLogout?: () => void;
 }
 
-// ─── EntryCard ────────────────────────────────────────────────────────────────
-interface EntryCardProps {
-  item: TravelEntry;
-  scheme: ColorScheme;
-}
+type NavTab = 'home' | 'favorites';
 
-const EntryCard: React.FC<EntryCardProps> = ({ item, scheme }) => {
+// ─── Hook: Press Animation ────────────────────────────────────────────────────
+const usePressAnimation = (toValue = 0.96) => {
   const scale = useRef(new Animated.Value(1)).current;
-  const tokens = glassTokens[scheme];
 
-  const handlePressIn = () =>
-    Animated.spring(scale, {
-      toValue: 0.96,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 4,
-    }).start();
+  const springConfig = (to: number) => ({
+    toValue: to,
+    useNativeDriver: true,
+    speed: 20,
+    bounciness: 5,
+  });
 
-  const handlePressOut = () =>
-    Animated.spring(scale, {
-      toValue: 1,
+  const onPressIn = () =>
+    Animated.spring(scale, springConfig(toValue)).start();
+
+  const onPressOut = (callback?: () => void) =>
+    Animated.spring(scale, springConfig(1)).start(() => callback?.());
+
+  return { scale, onPressIn, onPressOut };
+};
+
+// ─── Component: ImagePlaceholder ─────────────────────────────────────────────
+const ImagePlaceholder: React.FC<{ scheme: ColorScheme; size?: number }> = ({
+  scheme,
+  size = 32,
+}) => (
+  <View
+    style={[
+      SS.thumbImage,
+      {
+        backgroundColor: scheme === 'dark' ? '#2C2C2E' : '#E5E5EA',
+        alignItems: 'center',
+        justifyContent: 'center',
+      },
+    ]}
+  >
+    <Ionicons
+      name="image-outline"
+      size={size}
+      color={scheme === 'dark' ? '#48484A' : '#C7C7CC'}
+    />
+  </View>
+);
+
+// ─── Component: ThemeToggle ───────────────────────────────────────────────────
+const ThemeToggle: React.FC<{ scheme: ColorScheme }> = ({ scheme }) => {
+  const { resolvedScheme, toggleTheme } = useTheme();
+  const isDark = resolvedScheme === 'dark';
+  const colors = palette[scheme];
+
+  const translateX = useRef(new Animated.Value(isDark ? 18 : 0)).current;
+
+  const handleToggle = () => {
+    Animated.spring(translateX, {
+      toValue: isDark ? 0 : 18,
       useNativeDriver: true,
       speed: 20,
       bounciness: 6,
     }).start();
+    toggleTheme();
+  };
+
+  const trackColor = isDark ? colors.accent : 'rgba(120, 120, 128, 0.32)';
+
+  return (
+    <TouchableOpacity onPress={handleToggle} activeOpacity={0.8}>
+      <View style={[S.toggleTrack, { backgroundColor: trackColor }]}>
+        <Animated.View
+          style={[S.toggleThumb, { transform: [{ translateX }] }]}
+        />
+      </View>
+    </TouchableOpacity>
+  );
+};
+
+// ─── Component: ProfileDropdown ───────────────────────────────────────────────
+const ProfileDropdown: React.FC<{
+  scheme: ColorScheme;
+  onClose: () => void;
+  onLogout?: () => void;
+}> = ({ scheme, onClose, onLogout }) => {
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  return (
+    <>
+      {/* Invisible backdrop to dismiss */}
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={S.dropdownBackdrop} />
+      </TouchableWithoutFeedback>
+
+      <View style={[S.dropdownWrapper, { borderColor: tokens.border }]}>
+        <BlurView intensity={80} tint={tokens.tint} style={S.dropdownBlur}>
+
+          {/* Theme row with toggle */}
+          <View style={S.dropdownThemeRow}>
+            <Ionicons
+              name={scheme === 'dark' ? 'moon' : 'sunny'}
+              size={18}
+              color={colors.secondaryLabel}
+            />
+            <Text style={[S.dropdownThemeLabel, { color: colors.label }]}>
+              Dark Mode
+            </Text>
+            <ThemeToggle scheme={scheme} />
+          </View>
+
+          <View style={[S.dropdownSeparator, { backgroundColor: colors.separator }]} />
+
+          {/* Logout row */}
+          <TouchableOpacity
+            style={S.dropdownItem}
+            onPress={() => { onClose(); onLogout?.(); }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="log-out-outline" size={18} color={colors.destructive} />
+            <Text style={[S.dropdownItemLabel, { color: colors.destructive }]}>
+              Log Out
+            </Text>
+          </TouchableOpacity>
+
+        </BlurView>
+      </View>
+    </>
+  );
+};
+
+// ─── Component: BannerCard ────────────────────────────────────────────────────
+const BannerCard: React.FC<{ item: TravelEntry; scheme: ColorScheme }> = ({
+  item,
+  scheme,
+}) => {
+  const { scale, onPressIn, onPressOut } = usePressAnimation(0.98);
+  const tokens = glassTokens[scheme];
 
   return (
     <Animated.View
       style={[
-        sharedStyles.glassCard,
+        S.bannerCard,
         { transform: [{ scale }], borderColor: tokens.border },
       ]}
     >
       <TouchableOpacity
         activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        onPressIn={onPressIn}
+        onPressOut={() => onPressOut()}
         style={StyleSheet.absoluteFill}
       >
-        {/* Full-bleed image */}
         {item.imageUri ? (
           <Image
             source={{ uri: item.imageUri }}
-            style={sharedStyles.cardImage}
+            style={S.bannerImage}
             resizeMode="cover"
           />
         ) : (
-          <View
-            style={[
-              sharedStyles.cardImage,
-              {
-                backgroundColor: scheme === 'dark' ? '#2C2C2E' : '#E5E5EA',
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-            ]}
-          >
-            <Text style={{ fontSize: 48 }}>🗺️</Text>
-          </View>
+          <ImagePlaceholder scheme={scheme} size={52} />
         )}
 
-        {/* Liquid Glass footer */}
         <BlurView
-          intensity={60}
-          tint={scheme}
-          style={[
-            sharedStyles.cardBlurOverlay,
-            { borderTopColor: tokens.border },
-          ]}
+          intensity={55}
+          tint={tokens.tint}
+          style={[S.bannerOverlay, { borderTopColor: tokens.border }]}
         >
-          <View
-            style={[
-              StyleSheet.absoluteFill,
-              { backgroundColor: tokens.overlay },
-            ]}
-          />
-          <Text style={sharedStyles.cardAddressText} numberOfLines={1}>
-            📍 {item.address}
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: tokens.overlay }]} />
+          <Text style={S.bannerTitle} numberOfLines={1}>
+            {item.address}
           </Text>
-          <Text style={sharedStyles.cardDateText}>
+          <Text style={S.bannerDate}>
             {new Date(item.timestamp).toLocaleDateString('en-US', {
-              weekday: 'short',
               month: 'long',
               day: 'numeric',
               year: 'numeric',
@@ -132,129 +224,401 @@ const EntryCard: React.FC<EntryCardProps> = ({ item, scheme }) => {
   );
 };
 
-// ─── EmptyState ───────────────────────────────────────────────────────────────
-interface EmptyStateProps {
-  scheme: ColorScheme;
-}
-
-const EmptyState: React.FC<EmptyStateProps> = ({ scheme }) => {
+// ─── Component: ThumbCard ─────────────────────────────────────────────────────
+const ThumbCard: React.FC<{ item: TravelEntry; scheme: ColorScheme }> = ({
+  item,
+  scheme,
+}) => {
+  const { scale, onPressIn, onPressOut } = usePressAnimation(0.96);
   const tokens = glassTokens[scheme];
-  const colors = palette[scheme];
-
-  return (
-    <View style={homeScreenStyles.emptyContainer}>
-      <BlurView
-        intensity={50}
-        tint={scheme}
-        style={[
-          homeScreenStyles.emptyIconWrapper,
-          { borderColor: tokens.border },
-        ]}
-      >
-        <Text style={{ fontSize: 40 }}>🗺️</Text>
-      </BlurView>
-
-      <Text style={[homeScreenStyles.emptyTitle, { color: colors.label }]}>
-        No Memories Yet
-      </Text>
-      <Text style={[homeScreenStyles.emptyBody, { color: colors.label }]}>
-        Tap the button below to capture your first travel memory with a photo and location.
-      </Text>
-    </View>
-  );
-};
-
-// ─── FloatingActionButton ─────────────────────────────────────────────────────
-interface FloatingActionButtonProps {
-  onPress: () => void;
-  scheme: ColorScheme;
-}
-
-const FloatingActionButton: React.FC<FloatingActionButtonProps> = ({ onPress, scheme }) => {
-  const scale = useRef(new Animated.Value(1)).current;
-  const tokens = glassTokens[scheme];
-  const accentColor = scheme === 'dark' ? 'rgba(10,132,255,0.75)' : 'rgba(0,122,255,0.85)';
-
-  const handlePressIn = () =>
-    Animated.spring(scale, {
-      toValue: 0.95,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 4,
-    }).start();
-
-  const handlePressOut = () => {
-    Animated.spring(scale, {
-      toValue: 1,
-      useNativeDriver: true,
-      speed: 20,
-      bounciness: 6,
-    }).start();
-    onPress();
-  };
 
   return (
     <Animated.View
       style={[
-        homeScreenStyles.fabWrapper,
-        {
-          transform: [{ scale }],
-          borderColor: tokens.border,
-          backgroundColor: accentColor,
-        },
+        SS.thumbCard,
+        { transform: [{ scale }], borderColor: tokens.border },
       ]}
     >
       <TouchableOpacity
         activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
+        onPressIn={onPressIn}
+        onPressOut={() => onPressOut()}
+        style={StyleSheet.absoluteFill}
       >
-        <BlurView intensity={30} tint={scheme} style={homeScreenStyles.fabInner}>
-          <Text style={{ fontSize: 20, color: '#FFFFFF' }}>＋</Text>
-          <Text style={homeScreenStyles.fabLabel}>Add Travel Memory</Text>
+        {item.imageUri ? (
+          <Image
+            source={{ uri: item.imageUri }}
+            style={SS.thumbImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <ImagePlaceholder scheme={scheme} />
+        )}
+
+        <BlurView
+          intensity={55}
+          tint={tokens.tint}
+          style={[SS.thumbOverlay, { borderTopColor: tokens.border }]}
+        >
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: tokens.overlay }]} />
+          <Text style={SS.thumbTitle} numberOfLines={2}>
+            {item.address}
+          </Text>
+          <Text style={SS.thumbDate}>
+            {new Date(item.timestamp).toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+            })}
+          </Text>
         </BlurView>
       </TouchableOpacity>
     </Animated.View>
   );
 };
 
-// ─── HomeScreen ───────────────────────────────────────────────────────────────
-const HomeScreen: React.FC<HomeScreenProps> = ({ entries, onAddEntry }) => {
-  const colorScheme = useColorScheme();
-  const scheme: ColorScheme = colorScheme === 'dark' ? 'dark' : 'light';
+// ─── Component: EmptyState ────────────────────────────────────────────────────
+const EmptyState: React.FC<{ scheme: ColorScheme }> = ({ scheme }) => {
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  return (
+    <View style={S.emptyContainer}>
+      <BlurView
+        intensity={50}
+        tint={tokens.tint}
+        style={[S.emptyIconWrapper, { borderColor: tokens.border }]}
+      >
+        <View style={S.emptyIconBlur}>
+          <Ionicons name="map-outline" size={34} color={colors.tertiaryLabel} />
+        </View>
+      </BlurView>
+
+      <Text style={[S.emptyTitle, { color: colors.label }]}>
+        No Memories Yet
+      </Text>
+      <Text style={[S.emptyBody, { color: colors.label }]}>
+        Start your travel diary by adding your first memory below.
+      </Text>
+    </View>
+  );
+};
+
+// ─── Component: CTAButton ─────────────────────────────────────────────────────
+const CTAButton: React.FC<{
+  label: string;
+  scheme: ColorScheme;
+  onPress: () => void;
+}> = ({ label, scheme, onPress }) => {
+  const { scale, onPressIn, onPressOut } = usePressAnimation(0.96);
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  const glassBackground =
+    scheme === 'dark'
+      ? 'rgba(255, 255, 255, 0.12)'
+      : 'rgba(0, 0, 0, 0.08)';
+
+  return (
+    <Animated.View style={[S.ctaWrapper, { transform: [{ scale }] }]}>
+      <TouchableOpacity
+        activeOpacity={1}
+        onPressIn={onPressIn}
+        onPressOut={() => onPressOut(onPress)}
+      >
+        <BlurView
+          intensity={80}
+          tint={tokens.tint}
+          style={[S.ctaBlur, { backgroundColor: glassBackground }]}
+        >
+          <Text style={[S.ctaLabel, { color: colors.label }]}>{label}</Text>
+        </BlurView>
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// ─── Component: SearchBar ─────────────────────────────────────────────────────
+const SearchBar: React.FC<{
+  scheme: ColorScheme;
+  value: string;
+  onChange: (text: string) => void;
+}> = ({ scheme, value, onChange }) => {
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  return (
+    <BlurView
+      intensity={60}
+      tint={tokens.tint}
+      style={[S.searchWrapper, { borderColor: tokens.border }]}
+    >
+      <View style={S.searchBlur}>
+        <Ionicons name="search" size={16} color={colors.tertiaryLabel} />
+        <TextInput
+          style={[S.searchInput, { color: colors.label }]}
+          placeholder="Search memories..."
+          placeholderTextColor={colors.tertiaryLabel}
+          value={value}
+          onChangeText={onChange}
+          returnKeyType="search"
+        />
+        {value.length > 0 && (
+          <TouchableOpacity
+            onPress={() => onChange('')}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={16} color={colors.tertiaryLabel} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </BlurView>
+  );
+};
+
+// ─── Component: FloatingCapsuleNav ────────────────────────────────────────────
+interface FloatingCapsuleNavProps {
+  activeTab: NavTab;
+  scheme: ColorScheme;
+  onTabPress: (tab: NavTab) => void;
+  onAddPress: () => void;
+  onSearchPress: () => void;
+}
+
+const FloatingCapsuleNav: React.FC<FloatingCapsuleNavProps> = ({
+  activeTab,
+  scheme,
+  onTabPress,
+  onAddPress,
+  onSearchPress,
+}) => {
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+  const { scale: plusScale, onPressIn: plusIn, onPressOut: plusOut } =
+    usePressAnimation(0.92);
+
+  const NavButton: React.FC<{
+    tab: NavTab;
+    iconName: keyof typeof Ionicons.glyphMap;
+    iconNameActive: keyof typeof Ionicons.glyphMap;
+    label: string;
+  }> = ({ tab, iconName, iconNameActive, label }) => {
+    const isActive = activeTab === tab;
+    return (
+      <TouchableOpacity
+        style={S.navItemWrapper}
+        onPress={() => onTabPress(tab)}
+        activeOpacity={0.7}
+      >
+        <BlurView
+          intensity={isActive ? 40 : 0}
+          tint={tokens.tint}
+          style={S.navIconButton}
+        >
+          <Ionicons
+            name={isActive ? iconNameActive : iconName}
+            size={22}
+            color={isActive ? colors.accent : colors.tertiaryLabel}
+          />
+        </BlurView>
+        <Text
+          style={[
+            S.navLabel,
+            { color: isActive ? colors.accent : colors.tertiaryLabel },
+          ]}
+        >
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  return (
+    <View style={[S.navWrapper, { borderColor: tokens.navBorder }]}>
+      <BlurView intensity={75} tint={tokens.tint} style={S.navBlur}>
+        <NavButton
+          tab="home"
+          iconName="home-outline"
+          iconNameActive="home"
+          label="Home"
+        />
+        <NavButton
+          tab="favorites"
+          iconName="heart-outline"
+          iconNameActive="heart"
+          label="Favorites"
+        />
+
+        {/* Plus Button */}
+        <Animated.View
+          style={[
+            S.plusButton,
+            {
+              transform: [{ scale: plusScale }],
+              borderColor: tokens.border,
+            },
+          ]}
+        >
+          <TouchableOpacity
+            activeOpacity={1}
+            onPressIn={plusIn}
+            onPressOut={() => plusOut(onAddPress)}
+            style={StyleSheet.absoluteFill}
+          >
+            <BlurView intensity={60} tint={tokens.tint} style={S.plusBlur}>
+              <Ionicons name="add" size={26} color={colors.label} />
+            </BlurView>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Search Button */}
+        <TouchableOpacity
+          style={S.navItemWrapper}
+          onPress={onSearchPress}
+          activeOpacity={0.7}
+        >
+          <BlurView intensity={0} tint={tokens.tint} style={S.searchIconButton}>
+            <Ionicons name="search" size={20} color={colors.tertiaryLabel} />
+          </BlurView>
+        </TouchableOpacity>
+      </BlurView>
+    </View>
+  );
+};
+
+// ─── Screen: HomeScreen ───────────────────────────────────────────────────────
+const HomeScreen: React.FC<HomeScreenProps> = ({ entries, onAddEntry, onLogout }) => {
+  const { resolvedScheme } = useTheme();
+  const scheme: ColorScheme = resolvedScheme;
   const colors = palette[scheme];
   const tokens = glassTokens[scheme];
 
+  const [activeTab, setActiveTab]     = useState<NavTab>('home');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch]   = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const filteredEntries = searchQuery.trim()
+    ? entries.filter((entry) =>
+        entry.address.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : entries;
+
+  const bannerEntry = filteredEntries[0] ?? null;
+  const thumbEntries = filteredEntries.slice(1);
+  const thumbRows: TravelEntry[][] = [];
+  for (let i = 0; i < thumbEntries.length; i += 2) {
+    thumbRows.push(thumbEntries.slice(i, i + 2));
+  }
+
+  const handleSearchToggle = () => {
+    setShowSearch((prev) => !prev);
+    if (showSearch) setSearchQuery('');
+  };
+
   return (
-    <View style={[homeScreenStyles.container, { backgroundColor: colors.systemBackground }]}>
+    <View style={[S.container, { backgroundColor: colors.systemBackground }]}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
 
-      {/* Glass Header */}
-      <BlurView
-        intensity={80}
-        tint={scheme}
-        style={[homeScreenStyles.header, { borderBottomColor: tokens.border }]}
-      >
-        <Text style={[homeScreenStyles.headerTitle, { color: colors.label }]}>
-          ✈️ Travel Diary
-        </Text>
-        <Text style={[homeScreenStyles.headerSubtitle, { color: colors.label }]}>
-          {entries.length} {entries.length === 1 ? 'memory' : 'memories'} captured
-        </Text>
-      </BlurView>
-
-      {/* Entry List */}
-      <FlatList
-        data={entries}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={homeScreenStyles.listContent}
+      <ScrollView
+        contentContainerStyle={S.scrollContent}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={<EmptyState scheme={scheme} />}
-        renderItem={({ item }) => <EntryCard item={item} scheme={scheme} />}
-      />
+      >
+        {/* Header */}
+        <View style={S.headerWrapper}>
+          <View style={S.headerTop}>
+            <Text style={[S.headerTitle, { color: colors.label }]}>
+              Travel Diary
+            </Text>
 
-      {/* FAB */}
-      <FloatingActionButton onPress={onAddEntry} scheme={scheme} />
+            {/* Avatar → opens dropdown */}
+            <TouchableOpacity
+              onPress={() => setShowDropdown((prev) => !prev)}
+              activeOpacity={0.8}
+            >
+              <BlurView
+                intensity={60}
+                tint={tokens.tint}
+                style={[S.avatarButton, { borderColor: tokens.border }]}
+              >
+                <View style={S.avatarBlur}>
+                  <Ionicons name="person-circle" size={22} color={colors.accent} />
+                </View>
+              </BlurView>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={[S.headerSubtitle, { color: colors.secondaryLabel }]}>
+            {entries.length === 0
+              ? 'Start your journey'
+              : `${entries.length} ${entries.length === 1 ? 'memory' : 'memories'} captured`}
+          </Text>
+        </View>
+
+        {/* Search Bar */}
+        {showSearch && (
+          <SearchBar
+            scheme={scheme}
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+        )}
+
+        {/* Content */}
+        {filteredEntries.length === 0 ? (
+          <>
+            <EmptyState scheme={scheme} />
+            <CTAButton
+              label="Add Your First Memory"
+              scheme={scheme}
+              onPress={onAddEntry}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={[S.sectionTitle, { color: colors.label }]}>Up Next</Text>
+            {bannerEntry && <BannerCard item={bannerEntry} scheme={scheme} />}
+
+            <CTAButton
+              label="Add New Memory"
+              scheme={scheme}
+              onPress={onAddEntry}
+            />
+
+            {thumbRows.length > 0 && (
+              <>
+                <Text style={[S.sectionTitle, { color: colors.label }]}>
+                  All Memories
+                </Text>
+                {thumbRows.map((row, rowIndex) => (
+                  <View key={rowIndex} style={S.thumbRow}>
+                    {row.map((item) => (
+                      <ThumbCard key={item.id} item={item} scheme={scheme} />
+                    ))}
+                  </View>
+                ))}
+              </>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      {/* Profile Dropdown — rendered above scroll content */}
+      {showDropdown && (
+        <ProfileDropdown
+          scheme={scheme}
+          onClose={() => setShowDropdown(false)}
+          onLogout={onLogout}
+        />
+      )}
+
+      {/* Floating Capsule Nav */}
+      <FloatingCapsuleNav
+        activeTab={activeTab}
+        scheme={scheme}
+        onTabPress={setActiveTab}
+        onAddPress={onAddEntry}
+        onSearchPress={handleSearchToggle}
+      />
     </View>
   );
 };

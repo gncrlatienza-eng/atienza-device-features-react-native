@@ -2,103 +2,112 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
-// ─── Layout Constants ──────────────────────────────────────────────────────────
-export const CARD_WIDTH = width - 32;
-export const CARD_HEIGHT = 220;
-export const BORDER_RADIUS = 24;
-export const FAB_BOTTOM_OFFSET = 40;
+// ─── Layout Constants ─────────────────────────────────────────────────────────
+export const CARD_WIDTH = (width - 48) / 2;
+export const CARD_HEIGHT = 180;
+export const BORDER_RADIUS = 18;
 
-// ─── Design Tokens: Glass ─────────────────────────────────────────────────────
+// ─── Design Tokens ────────────────────────────────────────────────────────────
 export const glassTokens = {
   light: {
-    background: 'rgba(255, 255, 255, 0.45)',
-    border: 'rgba(255, 255, 255, 0.60)',
-    shadow: 'rgba(0, 0, 0, 0.08)',
-    overlay: 'rgba(255, 255, 255, 0.18)',
+    background:    'rgba(255, 255, 255, 0.45)',
+    border:        'rgba(255, 255, 255, 0.70)',
+    overlay:       'rgba(255, 255, 255, 0.20)',
+    navBackground: 'rgba(240, 240, 245, 0.55)',
+    navBorder:     'rgba(255, 255, 255, 0.80)',
+    tint:          'light' as const,
   },
   dark: {
-    background: 'rgba(30, 30, 40, 0.55)',
-    border: 'rgba(255, 255, 255, 0.12)',
-    shadow: 'rgba(0, 0, 0, 0.35)',
-    overlay: 'rgba(0, 0, 0, 0.35)',
+    background:    'rgba(28, 28, 32, 0.60)',
+    border:        'rgba(255, 255, 255, 0.10)',
+    overlay:       'rgba(0, 0, 0, 0.28)',
+    navBackground: 'rgba(30, 30, 35, 0.55)',
+    navBorder:     'rgba(255, 255, 255, 0.12)',
+    tint:          'dark' as const,
   },
 } as const;
 
-// ─── Design Tokens: Color Palette ─────────────────────────────────────────────
 export const palette = {
   light: {
-    systemBackground: '#F2F2F7',
+    systemBackground:    '#F2F2F7',
     secondaryBackground: '#FFFFFF',
-    label: '#000000',
-    secondaryLabel: '#3C3C43',
-    tertiaryLabel: '#8E8E93',
-    accent: '#007AFF',
-    separator: 'rgba(60, 60, 67, 0.12)',
+    label:               '#000000',
+    secondaryLabel:      '#3C3C43',
+    tertiaryLabel:       '#8E8E93',
+    accent:              '#007AFF',
+    destructive:         '#FF3B30',
+    separator:           'rgba(60, 60, 67, 0.10)',
   },
   dark: {
-    systemBackground: '#000000',
+    systemBackground:    '#000000',
     secondaryBackground: '#1C1C1E',
-    label: '#FFFFFF',
-    secondaryLabel: '#EBEBF5',
-    tertiaryLabel: '#8E8E93',
-    accent: '#0A84FF',
-    separator: 'rgba(84, 84, 88, 0.65)',
+    label:               '#FFFFFF',
+    secondaryLabel:      '#EBEBF5',
+    tertiaryLabel:       '#8E8E93',
+    accent:              '#0A84FF',
+    destructive:         '#FF453A',
+    separator:           'rgba(84, 84, 88, 0.55)',
   },
 } as const;
 
 export type ColorScheme = keyof typeof palette;
 
-// ─── Shared Component Styles ──────────────────────────────────────────────────
+// ─── Platform Shadow Helper ───────────────────────────────────────────────────
+export const createShadow = (
+  color = '#000',
+  opacity = 0.10,
+  radius = 12,
+  offsetY = 4,
+) =>
+  Platform.select({
+    ios: {
+      shadowColor: color,
+      shadowOffset: { width: 0, height: offsetY },
+      shadowOpacity: opacity,
+      shadowRadius: radius,
+    },
+    android: {
+      elevation: Math.round(radius / 2),
+    },
+  });
+
+// ─── Shared Styles ────────────────────────────────────────────────────────────
 export const sharedStyles = StyleSheet.create({
-  glassCard: {
+  thumbCard: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
     borderRadius: BORDER_RADIUS,
     overflow: 'hidden',
-    marginBottom: 16,
-    alignSelf: 'center',
     borderWidth: StyleSheet.hairlineWidth,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.12,
-        shadowRadius: 20,
-      },
-      android: {
-        elevation: 8,
-      },
-    }),
+    ...createShadow(),
   },
 
-  cardImage: {
+  thumbImage: {
     width: '100%',
     height: '100%',
     position: 'absolute',
   },
 
-  cardBlurOverlay: {
+  thumbOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 80,
-    justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
 
-  cardAddressText: {
-    fontSize: 15,
+  thumbTitle: {
+    fontSize: 13,
     fontWeight: '600',
-    letterSpacing: -0.3,
     color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
 
-  cardDateText: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: 'rgba(255, 255, 255, 0.75)',
+  thumbDate: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.65)',
     marginTop: 2,
   },
 });
@@ -109,11 +118,22 @@ export const homeScreenStyles = StyleSheet.create({
     flex: 1,
   },
 
-  header: {
+  scrollContent: {
+    paddingBottom: 160,
+  },
+
+  // ── Header ───────────────────────────────────────────────────────────────────
+  headerWrapper: {
     paddingTop: 60,
-    paddingBottom: 16,
     paddingHorizontal: 20,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingBottom: 6,
+  },
+
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
   },
 
   headerTitle: {
@@ -124,86 +144,313 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: 17,
     fontWeight: '400',
     letterSpacing: -0.08,
-    marginTop: 2,
-    opacity: 0.6,
+    marginBottom: 20,
   },
 
-  listContent: {
-    paddingTop: 16,
-    paddingBottom: 130,
+  avatarButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
   },
 
-  emptyContainer: {
+  avatarBlur: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingTop: 100,
+  },
+
+  // ── Profile Dropdown ──────────────────────────────────────────────────────────
+  dropdownBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
+  },
+
+  dropdownWrapper: {
+    position: 'absolute',
+    top: 104,
+    right: 20,
+    width: 220,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    zIndex: 20,
+    ...createShadow('#000', 0.20, 24, 8),
+  },
+
+  dropdownBlur: {
+    paddingVertical: 8,
+  },
+
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
+  },
+
+  dropdownItemLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+  },
+
+  dropdownSeparator: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+  },
+
+  dropdownThemeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
+  },
+
+  dropdownThemeLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: -0.2,
+  },
+
+  // Minimalistic toggle pill
+  toggleTrack: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    justifyContent: 'center',
+    paddingHorizontal: 3,
+  },
+
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    ...createShadow('#000', 0.20, 4, 2),
+  },
+
+  // ── Section ───────────────────────────────────────────────────────────────────
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    letterSpacing: 0.35,
+    marginTop: 24,
+    marginBottom: 12,
+    paddingHorizontal: 20,
+  },
+
+  // ── Banner Card ───────────────────────────────────────────────────────────────
+  bannerCard: {
+    height: 200,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    ...createShadow('#000', 0.12, 16, 6),
+  },
+
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+
+  bannerOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+
+  bannerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+
+  bannerDate: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.70)',
+    marginTop: 3,
+  },
+
+  // ── Thumbnail Grid ────────────────────────────────────────────────────────────
+  thumbRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    gap: 12,
+    marginBottom: 12,
+  },
+
+  // ── CTA Button ────────────────────────────────────────────────────────────────
+  ctaWrapper: {
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 50,
+    overflow: 'hidden',
+    ...createShadow('#000', 0.14, 10, 4),
+  },
+
+  ctaBlur: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+
+  ctaLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: -0.3,
+  },
+
+  // ── Empty State ───────────────────────────────────────────────────────────────
+  emptyContainer: {
+    alignItems: 'center',
+    paddingTop: 80,
     paddingHorizontal: 40,
   },
 
   emptyIconWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: 28,
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     overflow: 'hidden',
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+
+  emptyIconBlur: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   emptyTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    letterSpacing: 0.35,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 0.2,
   },
 
   emptyBody: {
     fontSize: 15,
-    fontWeight: '400',
     textAlign: 'center',
     lineHeight: 22,
-    opacity: 0.55,
+    opacity: 0.50,
   },
 
-  fabWrapper: {
-    position: 'absolute',
-    bottom: FAB_BOTTOM_OFFSET,
-    left: 24,
-    right: 24,
-    borderRadius: 20,
+  // ── Search Bar ────────────────────────────────────────────────────────────────
+  searchWrapper: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    borderRadius: 14,
     overflow: 'hidden',
     borderWidth: StyleSheet.hairlineWidth,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#007AFF',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 10,
-      },
-    }),
   },
 
-  fabInner: {
+  searchBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 18,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
     gap: 8,
   },
 
-  fabLabel: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.4,
-    color: '#FFFFFF',
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '400',
+  },
+
+  // ── Floating Capsule Nav ──────────────────────────────────────────────────────
+  navWrapper: {
+    position: 'absolute',
+    bottom: 36,
+    alignSelf: 'center',
+    borderRadius: 50,
+    overflow: 'hidden',
+    borderWidth: StyleSheet.hairlineWidth,
+    ...createShadow('#000', 0.18, 24, 8),
+  },
+
+  navBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 4,
+  },
+
+  navItemWrapper: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+
+  navIconButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  navIconBlur: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  navLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    marginTop: 2,
+    letterSpacing: 0.1,
+  },
+
+  plusButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    marginHorizontal: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+
+  plusBlur: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  searchIconButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  searchIconBlur: {
+    flex: 1,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
