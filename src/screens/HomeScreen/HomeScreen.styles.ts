@@ -3,7 +3,7 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 const { width } = Dimensions.get('window');
 
 // ─── Layout Constants ─────────────────────────────────────────────────────────
-export const CARD_WIDTH = (width - 48) / 2;
+export const CARD_WIDTH  = (width - 48) / 2;
 export const CARD_HEIGHT = 180;
 export const BORDER_RADIUS = 18;
 
@@ -14,7 +14,7 @@ export const glassTokens = {
     border:        'rgba(255, 255, 255, 0.70)',
     overlay:       'rgba(255, 255, 255, 0.20)',
     navBackground: 'rgba(240, 240, 245, 0.55)',
-    navBorder:     'rgba(255, 255, 255, 0.80)',
+    navBorder:     'rgba(200, 200, 210, 0.50)',
     tint:          'light' as const,
   },
   dark: {
@@ -54,21 +54,14 @@ export type ColorScheme = keyof typeof palette;
 
 // ─── Platform Shadow Helper ───────────────────────────────────────────────────
 export const createShadow = (
-  color = '#000',
+  color   = '#000',
   opacity = 0.10,
-  radius = 12,
+  radius  = 12,
   offsetY = 4,
 ) =>
   Platform.select({
-    ios: {
-      shadowColor: color,
-      shadowOffset: { width: 0, height: offsetY },
-      shadowOpacity: opacity,
-      shadowRadius: radius,
-    },
-    android: {
-      elevation: Math.round(radius / 2),
-    },
+    ios:     { shadowColor: color, shadowOffset: { width: 0, height: offsetY }, shadowOpacity: opacity, shadowRadius: radius },
+    android: { elevation: Math.round(radius / 2) },
   });
 
 // ─── Shared Styles ────────────────────────────────────────────────────────────
@@ -150,18 +143,24 @@ export const homeScreenStyles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  // Liquid Glass Avatar — 44×44
   avatarButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-
-  avatarBlur: {
-    flex: 1,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0, 0, 0, 0.12)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     alignItems: 'center',
     justifyContent: 'center',
+    ...createShadow('#000', 0.08, 8, 2),
+  },
+
+  avatarInitials: {
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 
   // ── Profile Dropdown ──────────────────────────────────────────────────────────
@@ -172,18 +171,33 @@ export const homeScreenStyles = StyleSheet.create({
 
   dropdownWrapper: {
     position: 'absolute',
-    top: 104,
+    top: 112,
     right: 20,
     width: 220,
     borderRadius: 16,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
     zIndex: 20,
     ...createShadow('#000', 0.20, 24, 8),
   },
 
   dropdownBlur: {
     paddingVertical: 8,
+  },
+
+  dropdownThemeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    gap: 12,
+  },
+
+  dropdownThemeLabel: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    letterSpacing: -0.2,
   },
 
   dropdownItem: {
@@ -201,23 +215,8 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   dropdownSeparator: {
-    height: StyleSheet.hairlineWidth,
+    height: 0.5,
     marginHorizontal: 16,
-  },
-
-  dropdownThemeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    gap: 12,
-  },
-
-  dropdownThemeLabel: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    letterSpacing: -0.2,
   },
 
   // Minimalistic toggle pill
@@ -237,7 +236,7 @@ export const homeScreenStyles = StyleSheet.create({
     ...createShadow('#000', 0.20, 4, 2),
   },
 
-  // ── Section ───────────────────────────────────────────────────────────────────
+  // ── Sections ──────────────────────────────────────────────────────────────────
   sectionTitle: {
     fontSize: 22,
     fontWeight: '700',
@@ -298,15 +297,15 @@ export const homeScreenStyles = StyleSheet.create({
   ctaWrapper: {
     marginHorizontal: 16,
     marginTop: 20,
-    borderRadius: 50,
+    borderRadius: 100,
     overflow: 'hidden',
-    ...createShadow('#000', 0.14, 10, 4),
+    ...createShadow('#000', 0.10, 10, 4),
   },
 
   ctaBlur: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 17,
   },
 
   ctaLabel: {
@@ -323,12 +322,12 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   emptyIconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: 120,
+    height: 120,
+    borderRadius: 34,
     overflow: 'hidden',
-    marginBottom: 20,
-    borderWidth: StyleSheet.hairlineWidth,
+    marginBottom: 24,
+    borderWidth: 0.5,
   },
 
   emptyIconBlur: {
@@ -338,10 +337,10 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
     letterSpacing: 0.2,
   },
 
@@ -350,6 +349,7 @@ export const homeScreenStyles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
     opacity: 0.50,
+    marginBottom: 32,
   },
 
   // ── Search Bar ────────────────────────────────────────────────────────────────
@@ -378,11 +378,10 @@ export const homeScreenStyles = StyleSheet.create({
   // ── Floating Capsule Nav ──────────────────────────────────────────────────────
   navWrapper: {
     position: 'absolute',
-    bottom: 36,
     alignSelf: 'center',
     borderRadius: 50,
     overflow: 'hidden',
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
     ...createShadow('#000', 0.18, 24, 8),
   },
 
@@ -409,13 +408,6 @@ export const homeScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  navIconBlur: {
-    flex: 1,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
   navLabel: {
     fontSize: 10,
     fontWeight: '500',
@@ -429,7 +421,7 @@ export const homeScreenStyles = StyleSheet.create({
     borderRadius: 26,
     overflow: 'hidden',
     marginHorizontal: 4,
-    borderWidth: StyleSheet.hairlineWidth,
+    borderWidth: 0.5,
   },
 
   plusBlur: {
@@ -443,13 +435,6 @@ export const homeScreenStyles = StyleSheet.create({
     height: 52,
     borderRadius: 26,
     overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  searchIconBlur: {
-    flex: 1,
-    width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
