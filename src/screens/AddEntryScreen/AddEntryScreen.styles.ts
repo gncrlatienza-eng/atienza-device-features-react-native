@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
 export const createShadow = (
   color   = '#000',
@@ -14,7 +14,6 @@ export const createShadow = (
   });
 
 export const addEntryStyles = StyleSheet.create({
-  // ── Sheet Container ───────────────────────────────────────────────────────────
   container: {
     flex: 1,
   },
@@ -58,12 +57,6 @@ export const addEntryStyles = StyleSheet.create({
     letterSpacing: -0.2,
   },
 
-  headerButtonBold: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-
   // ── Image Picker ──────────────────────────────────────────────────────────────
   imagePickerWrapper: {
     marginHorizontal: 16,
@@ -93,7 +86,6 @@ export const addEntryStyles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  // Retake overlay on top of captured image
   retakeOverlay: {
     position: 'absolute',
     top: 12,
@@ -158,7 +150,7 @@ export const addEntryStyles = StyleSheet.create({
     marginVertical: 2,
   },
 
-  // ── Text Input ────────────────────────────────────────────────────────────────
+  // ── Note Input ────────────────────────────────────────────────────────────────
   noteInput: {
     fontSize: 15,
     fontWeight: '400',
@@ -196,19 +188,5 @@ export const addEntryStyles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: -0.4,
     color: '#FFFFFF',
-  },
-
-  // ── Error / Status ────────────────────────────────────────────────────────────
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
-
-  statusText: {
-    fontSize: 13,
-    fontWeight: '400',
   },
 });

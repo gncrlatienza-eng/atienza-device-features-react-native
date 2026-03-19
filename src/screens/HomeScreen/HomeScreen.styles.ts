@@ -3,8 +3,8 @@ import { StyleSheet, Dimensions, Platform } from 'react-native';
 const { width } = Dimensions.get('window');
 
 // ─── Layout Constants ─────────────────────────────────────────────────────────
-export const CARD_WIDTH  = width - 32;
-export const CARD_HEIGHT = 220;
+export const CARD_WIDTH    = width - 32;
+export const CARD_HEIGHT   = 220;
 export const BORDER_RADIUS = 20;
 
 // ─── Design Tokens ────────────────────────────────────────────────────────────
@@ -105,7 +105,6 @@ export const homeScreenStyles = StyleSheet.create({
     letterSpacing: -0.08,
   },
 
-  // Liquid Glass Avatar
   avatarButton: {
     width: 44,
     height: 44,
@@ -196,7 +195,7 @@ export const homeScreenStyles = StyleSheet.create({
     ...createShadow('#000', 0.20, 4, 2),
   },
 
-  // ── Entry Card (full-width, image fill with glass overlay) ────────────────────
+  // ── Entry Card ────────────────────────────────────────────────────────────────
   entryCard: {
     width: CARD_WIDTH,
     height: CARD_HEIGHT,
@@ -218,7 +217,6 @@ export const homeScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Glass text overlay at card bottom
   entryOverlay: {
     position: 'absolute',
     bottom: 0,
