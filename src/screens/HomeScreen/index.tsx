@@ -34,18 +34,18 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface HomeScreenProps {
-  entries:            TravelEntry[];
-  folders:            Folder[];
-  onAddEntry:         () => void;
-  onSelectEntry:      (entry: TravelEntry) => void;
-  onToggleFavorite:   (id: string) => void;
-  onMoveToFolder:     (entryId: string, folderId: string | undefined) => void;
-  onSearchPress:      () => void;
-  onFoldersPress:     () => void;
-  onLogout:           () => void;
+  entries:          TravelEntry[];
+  folders:          Folder[];
+  onAddEntry:       () => void;
+  onSelectEntry:    (entry: TravelEntry) => void;
+  onToggleFavorite: (id: string) => void;
+  onMoveToFolder:   (entryId: string, folderId: string | undefined) => void;
+  onSearchPress:    () => void;
+  onFoldersPress:   () => void;
+  onLogout:         () => void;
 }
 
-type NavTab = 'home' | 'favorites';
+type NavTab = 'home' | 'folders';
 
 // ─── Hook: Press Animation ────────────────────────────────────────────────────
 const usePressAnimation = (toValue = 0.96) => {
@@ -56,14 +56,115 @@ const usePressAnimation = (toValue = 0.96) => {
   return { scale, onPressIn, onPressOut };
 };
 
+// ─── Component: FolderPickerModal ─────────────────────────────────────────────
+const FolderPickerModal: React.FC<{
+  visible:        boolean;
+  entry:          TravelEntry | null;
+  folders:        Folder[];
+  scheme:         ColorScheme;
+  onMove:         (entryId: string, folderId: string | undefined) => void;
+  onClose:        () => void;
+}> = ({ visible, entry, folders, scheme, onMove, onClose }) => {
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  // Only show user-created folders (not system folders like Favorites)
+  const userFolders = folders.filter((f) => !f.isSystem);
+
+  if (!entry) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={fpStyles.backdrop}>
+          <TouchableWithoutFeedback>
+            <View style={[fpStyles.sheet, { backgroundColor: scheme === 'dark' ? '#1C1C1E' : '#F2F2F7', borderColor: tokens.border }]}>
+              {/* Handle */}
+              <View style={[fpStyles.handle, { backgroundColor: colors.tertiaryLabel }]} />
+
+              <Text style={[fpStyles.title, { color: colors.label }]}>Move to Folder</Text>
+              <Text style={[fpStyles.subtitle, { color: colors.secondaryLabel }]}>
+                {entry.title || entry.address.split(',')[0]}
+              </Text>
+
+              <ScrollView style={fpStyles.list} showsVerticalScrollIndicator={false}>
+                {/* "No folder" option */}
+                <TouchableOpacity
+                  style={[fpStyles.row, { borderBottomColor: colors.separator }]}
+                  activeOpacity={0.7}
+                  onPress={() => { onMove(entry.id, undefined); onClose(); Haptics.selectionAsync(); }}
+                >
+                  <View style={[fpStyles.rowIcon, { backgroundColor: scheme === 'dark' ? '#3A3A3C' : '#E5E5EA' }]}>
+                    <Ionicons name="close-outline" size={20} color={colors.tertiaryLabel} />
+                  </View>
+                  <Text style={[fpStyles.rowLabel, { color: colors.label }]}>None (remove from folder)</Text>
+                  {entry.folderId === undefined && (
+                    <Ionicons name="checkmark" size={20} color={colors.accent} />
+                  )}
+                </TouchableOpacity>
+
+                {userFolders.length === 0 && (
+                  <Text style={[fpStyles.emptyHint, { color: colors.tertiaryLabel }]}>
+                    No folders yet. Create one in the Folders screen.
+                  </Text>
+                )}
+
+                {userFolders.map((folder) => (
+                  <TouchableOpacity
+                    key={folder.id}
+                    style={[fpStyles.row, { borderBottomColor: colors.separator }]}
+                    activeOpacity={0.7}
+                    onPress={() => { onMove(entry.id, folder.id); onClose(); Haptics.selectionAsync(); }}
+                  >
+                    <View style={[fpStyles.rowIcon, { backgroundColor: scheme === 'dark' ? '#3A3A3C' : '#E5E5EA' }]}>
+                      <Ionicons name="folder" size={20} color={colors.accent} />
+                    </View>
+                    <Text style={[fpStyles.rowLabel, { color: colors.label }]}>{folder.name}</Text>
+                    {entry.folderId === folder.id && (
+                      <Ionicons name="checkmark" size={20} color={colors.accent} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              <TouchableOpacity
+                style={[fpStyles.cancelBtn, { borderTopColor: colors.separator }]}
+                activeOpacity={0.7}
+                onPress={onClose}
+              >
+                <Text style={[fpStyles.cancelLabel, { color: colors.accent }]}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
+  );
+};
+
+const fpStyles = StyleSheet.create({
+  backdrop:     { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet:        { borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: 0.5, paddingTop: 12, maxHeight: '70%' },
+  handle:       { width: 36, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16, opacity: 0.4 },
+  title:        { fontSize: 18, fontWeight: '700', textAlign: 'center', marginBottom: 4, paddingHorizontal: 20 },
+  subtitle:     { fontSize: 13, textAlign: 'center', marginBottom: 16, paddingHorizontal: 20, opacity: 0.7 },
+  list:         { flexGrow: 0 },
+  row:          { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 0.5 },
+  rowIcon:      { width: 34, height: 34, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  rowLabel:     { flex: 1, fontSize: 16, fontWeight: '400' },
+  emptyHint:    { fontSize: 14, textAlign: 'center', paddingVertical: 20, paddingHorizontal: 20 },
+  cancelBtn:    { borderTopWidth: 0.5, paddingVertical: 16, alignItems: 'center' },
+  cancelLabel:  { fontSize: 17, fontWeight: '600' },
+});
+
 // ─── Component: ContextMenu ───────────────────────────────────────────────────
 const ContextMenu: React.FC<{
-  entry:           TravelEntry;
-  scheme:          ColorScheme;
-  onClose:         () => void;
-  onFavorite:      () => void;
-  onAddToFolder:   () => void;
-  onDelete:        () => void;
+  entry:         TravelEntry;
+  scheme:        ColorScheme;
+  onClose:       () => void;
+  onFavorite:    () => void;
+  onAddToFolder: () => void;
+  onDelete:      () => void;
 }> = ({ entry, scheme, onClose, onFavorite, onAddToFolder, onDelete }) => {
   const tokens = glassTokens[scheme];
   const colors = palette[scheme];
@@ -76,14 +177,14 @@ const ContextMenu: React.FC<{
       onPress: onFavorite,
     },
     {
-      label:   'Add to Folder',
-      icon:    'folder-outline',
+      label:   entry.folderId ? 'Move Folder' : 'Add to Folder',
+      icon:    'folder-outline' as const,
       color:   colors.label,
       onPress: onAddToFolder,
     },
     {
       label:   'Delete Memory',
-      icon:    'trash-outline',
+      icon:    'trash-outline' as const,
       color:   colors.destructive,
       onPress: onDelete,
     },
@@ -133,17 +234,17 @@ const ctxStyles = StyleSheet.create({
 
 // ─── Component: ConfirmModal ──────────────────────────────────────────────────
 const ConfirmModal: React.FC<{
-  visible:   boolean;
-  title:     string;
-  body:      string;
-  iconName:  string;
-  iconColor: string;
-  iconBg:    string;
+  visible:      boolean;
+  title:        string;
+  body:         string;
+  iconName:     string;
+  iconColor:    string;
+  iconBg:       string;
   confirmLabel: string;
   confirmColor: string;
-  scheme:    ColorScheme;
-  onConfirm: () => void;
-  onCancel:  () => void;
+  scheme:       ColorScheme;
+  onConfirm:    () => void;
+  onCancel:     () => void;
 }> = ({ visible, title, body, iconName, iconColor, iconBg, confirmLabel, confirmColor, scheme, onConfirm, onCancel }) => {
   const tokens = glassTokens[scheme];
   const colors = palette[scheme];
@@ -180,26 +281,26 @@ const ConfirmModal: React.FC<{
 };
 
 const confirmStyles = StyleSheet.create({
-  backdrop:         { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
-  card:             { width: '100%', borderRadius: 20, overflow: 'hidden', borderWidth: 0.5 },
-  blurTop:          { paddingTop: 28, paddingBottom: 8, paddingHorizontal: 20, alignItems: 'center' },
-  icon:             { width: 56, height: 56, borderRadius: 16, overflow: 'hidden', borderWidth: 0.5, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  title:            { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 8, letterSpacing: -0.3 },
-  body:             { fontSize: 14, textAlign: 'center', lineHeight: 20, opacity: 0.60, marginBottom: 24 },
-  divider:          { height: 0.5 },
-  actions:          { flexDirection: 'row' },
-  action:           { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
-  actionDivider:    { width: 0.5 },
-  actionLabel:      { fontSize: 17, fontWeight: '400' },
-  actionLabelBold:  { fontSize: 17, fontWeight: '600' },
+  backdrop:        { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+  card:            { width: '100%', borderRadius: 20, overflow: 'hidden', borderWidth: 0.5 },
+  blurTop:         { paddingTop: 28, paddingBottom: 8, paddingHorizontal: 20, alignItems: 'center' },
+  icon:            { width: 56, height: 56, borderRadius: 16, overflow: 'hidden', borderWidth: 0.5, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  title:           { fontSize: 17, fontWeight: '700', textAlign: 'center', marginBottom: 8, letterSpacing: -0.3 },
+  body:            { fontSize: 14, textAlign: 'center', lineHeight: 20, opacity: 0.60, marginBottom: 24 },
+  divider:         { height: 0.5 },
+  actions:         { flexDirection: 'row' },
+  action:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },
+  actionDivider:   { width: 0.5 },
+  actionLabel:     { fontSize: 17, fontWeight: '400' },
+  actionLabelBold: { fontSize: 17, fontWeight: '600' },
 });
 
 // ─── Component: EntryCard ─────────────────────────────────────────────────────
 const EntryCard: React.FC<{
-  item:          TravelEntry;
-  scheme:        ColorScheme;
-  onPress:       () => void;
-  onMenuPress:   () => void;
+  item:        TravelEntry;
+  scheme:      ColorScheme;
+  onPress:     () => void;
+  onMenuPress: () => void;
 }> = ({ item, scheme, onPress, onMenuPress }) => {
   const { scale, onPressIn, onPressOut } = usePressAnimation(0.97);
   const tokens = glassTokens[scheme];
@@ -219,7 +320,6 @@ const EntryCard: React.FC<{
             <Ionicons name="image-outline" size={52} color={scheme === 'dark' ? '#3A3A3C' : '#C7C7CC'} />
           </View>
         )}
-
         <BlurView intensity={50} tint={tokens.tint} style={[S.entryOverlay, { borderTopColor: tokens.border }]}>
           <View style={[StyleSheet.absoluteFill, { backgroundColor: tokens.overlay }]} />
           <Text style={S.entryTitle} numberOfLines={1}>
@@ -235,14 +335,12 @@ const EntryCard: React.FC<{
         </BlurView>
       </TouchableOpacity>
 
-      {/* 3-dot menu button — top left */}
       <TouchableOpacity style={S.menuButton} onPress={onMenuPress} activeOpacity={0.8}>
         <BlurView intensity={60} tint="dark" style={[S.menuBlur, { borderColor: 'rgba(255,255,255,0.20)' }]}>
           <Ionicons name="ellipsis-horizontal" size={16} color="rgba(255,255,255,0.90)" />
         </BlurView>
       </TouchableOpacity>
 
-      {/* Heart indicator top right */}
       {item.isFavorite && (
         <View style={S.favoriteBadge}>
           <Ionicons name="heart" size={13} color="#FF453A" />
@@ -253,22 +351,21 @@ const EntryCard: React.FC<{
 };
 
 // ─── Component: EmptyState ────────────────────────────────────────────────────
-const EmptyState: React.FC<{ scheme: ColorScheme; isFavorites?: boolean }> = ({ scheme, isFavorites }) => {
+const EmptyState: React.FC<{ scheme: ColorScheme; isFolders?: boolean }> = ({ scheme, isFolders }) => {
   const tokens = glassTokens[scheme];
   const colors = palette[scheme];
-
   return (
     <View style={S.emptyContainer}>
       <BlurView intensity={50} tint={tokens.tint} style={[S.emptyIconWrapper, { borderColor: tokens.border }]}>
         <View style={S.emptyIconBlur}>
-          <Ionicons name={isFavorites ? 'heart-outline' : 'map-outline'} size={64} color={colors.tertiaryLabel} />
+          <Ionicons name={isFolders ? 'heart-outline' : 'map-outline'} size={64} color={colors.tertiaryLabel} />
         </View>
       </BlurView>
       <Text style={[S.emptyTitle, { color: colors.label }]}>
-        {isFavorites ? 'No Favorites Yet' : 'No Memories Yet'}
+        {isFolders ? 'No Favorites Yet' : 'No Memories Yet'}
       </Text>
       <Text style={[S.emptyBody, { color: colors.label }]}>
-        {isFavorites
+        {isFolders
           ? 'Tap ··· on any memory and select Add to Favorites.'
           : 'Start your travel diary by adding your first memory below.'}
       </Text>
@@ -286,7 +383,6 @@ const CTAButton: React.FC<{
   const bg = isPrimary
     ? scheme === 'dark' ? 'rgba(10,132,255,0.25)' : 'rgba(0,122,255,0.12)'
     : scheme === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.06)';
-
   return (
     <Animated.View style={[S.ctaWrapper, { transform: [{ scale }] }]}>
       <TouchableOpacity
@@ -308,13 +404,11 @@ const ThemeToggle: React.FC<{ scheme: ColorScheme }> = ({ scheme }) => {
   const isDark     = resolvedScheme === 'dark';
   const colors     = palette[scheme];
   const translateX = useRef(new Animated.Value(isDark ? 18 : 0)).current;
-
   const handleToggle = () => {
     Haptics.selectionAsync();
     Animated.spring(translateX, { toValue: isDark ? 0 : 18, useNativeDriver: true, speed: 20, bounciness: 6 }).start();
     toggleTheme();
   };
-
   return (
     <TouchableOpacity onPress={handleToggle} activeOpacity={0.8}>
       <View style={[S.toggleTrack, { backgroundColor: isDark ? colors.accent : 'rgba(120,120,128,0.32)' }]}>
@@ -330,7 +424,6 @@ const ProfileDropdown: React.FC<{
 }> = ({ scheme, onClose, onLogout }) => {
   const tokens = glassTokens[scheme];
   const colors = palette[scheme];
-
   return (
     <>
       <TouchableWithoutFeedback onPress={onClose}>
@@ -360,13 +453,14 @@ const ProfileDropdown: React.FC<{
 
 // ─── Component: FloatingCapsuleNav ────────────────────────────────────────────
 const FloatingCapsuleNav: React.FC<{
-  activeTab:     NavTab;
-  scheme:        ColorScheme;
-  bottomInset:   number;
-  onTabPress:    (tab: NavTab) => void;
-  onAddPress:    () => void;
-  onSearchPress: () => void;
-}> = ({ activeTab, scheme, bottomInset, onTabPress, onAddPress, onSearchPress }) => {
+  activeTab:      NavTab;
+  scheme:         ColorScheme;
+  bottomInset:    number;
+  onTabPress:     (tab: NavTab) => void;
+  onAddPress:     () => void;
+  onSearchPress:  () => void;
+  onFoldersPress: () => void;
+}> = ({ activeTab, scheme, bottomInset, onTabPress, onAddPress, onSearchPress, onFoldersPress }) => {
   const tokens    = glassTokens[scheme];
   const colors    = palette[scheme];
   const navBottom = bottomInset > 0 ? bottomInset - 8 : 12;
@@ -377,9 +471,7 @@ const FloatingCapsuleNav: React.FC<{
   }> = ({ tab, iconName, iconNameActive, label }) => {
     const isActive = activeTab === tab;
     return (
-      <TouchableOpacity
-        style={S.navItemWrapper}
-        activeOpacity={0.7}
+      <TouchableOpacity style={S.navItemWrapper} activeOpacity={0.7}
         onPress={() => { Haptics.selectionAsync(); onTabPress(tab); }}
       >
         <BlurView intensity={isActive ? 35 : 0} tint={tokens.tint} style={S.navIconButton}>
@@ -393,12 +485,21 @@ const FloatingCapsuleNav: React.FC<{
   return (
     <View style={[S.navWrapper, { borderColor: tokens.navBorder, bottom: navBottom }]}>
       <BlurView intensity={40} tint={tokens.tint} style={S.navBlur}>
-        <NavButton tab="home"      iconName="home-outline"  iconNameActive="home"  label="Home"      />
-        <NavButton tab="favorites" iconName="heart-outline" iconNameActive="heart" label="Favorites" />
+        {/* 1. Home */}
+        <NavButton tab="home" iconName="home-outline" iconNameActive="home" label="Home" />
 
-        <TouchableOpacity
-          style={S.navItemWrapper}
-          activeOpacity={0.7}
+        {/* 2. Folders — opens FoldersScreen overlay */}
+        <TouchableOpacity style={S.navItemWrapper} activeOpacity={0.7}
+          onPress={() => { Haptics.selectionAsync(); onFoldersPress(); }}
+        >
+          <BlurView intensity={0} tint={tokens.tint} style={S.navIconButton}>
+            <Ionicons name="folder-outline" size={20} color={colors.tertiaryLabel} />
+          </BlurView>
+          <Text style={[S.navLabel, { color: colors.tertiaryLabel }]}>Folders</Text>
+        </TouchableOpacity>
+
+        {/* 3. Add */}
+        <TouchableOpacity style={S.navItemWrapper} activeOpacity={0.7}
           onPressIn={plusIn}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); plusOut(onAddPress); }}
         >
@@ -410,9 +511,8 @@ const FloatingCapsuleNav: React.FC<{
           <Text style={[S.navLabel, { color: colors.tertiaryLabel }]}>Add</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={S.navItemWrapper}
-          activeOpacity={0.7}
+        {/* 4. Search */}
+        <TouchableOpacity style={S.navItemWrapper} activeOpacity={0.7}
           onPress={() => { Haptics.selectionAsync(); onSearchPress(); }}
         >
           <View style={S.searchNavButton}>
@@ -433,31 +533,36 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   const { resolvedScheme }  = useTheme();
   const scheme: ColorScheme = resolvedScheme;
   const colors              = palette[scheme];
-  const tokens              = glassTokens[scheme];
   const insets              = useSafeAreaInsets();
 
-  const [activeTab,      setActiveTab]      = useState<NavTab>('home');
-  const [showDropdown,   setShowDropdown]   = useState(false);
-  const [contextEntry,   setContextEntry]   = useState<TravelEntry | null>(null);
-  const [confirmFav,     setConfirmFav]     = useState<TravelEntry | null>(null);
+  const [activeTab,       setActiveTab]       = useState<NavTab>('home');
+  const [showDropdown,    setShowDropdown]    = useState(false);
+  const [contextEntry,    setContextEntry]    = useState<TravelEntry | null>(null);
+  const [confirmFav,      setConfirmFav]      = useState<TravelEntry | null>(null);
+  const [folderPickEntry, setFolderPickEntry] = useState<TravelEntry | null>(null);
 
-  const displayedEntries = activeTab === 'favorites'
+  // home → all entries | folders tab → only favorites
+  const displayedEntries = activeTab === 'folders'
     ? entries.filter((e) => e.isFavorite)
     : entries;
+
+  const favCount       = entries.filter((e) => e.isFavorite).length;
+  const headerTitle    = activeTab === 'folders' ? 'Favorites' : 'Travel Diary';
+  const headerSubtitle = activeTab === 'folders'
+    ? `${favCount} favorite ${favCount === 1 ? 'memory' : 'memories'}`
+    : entries.length === 0
+      ? 'Start your journey'
+      : `${entries.length} ${entries.length === 1 ? 'memory' : 'memories'} captured`;
 
   return (
     <View style={[S.container, { backgroundColor: colors.systemBackground }]}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
 
       <ScrollView contentContainerStyle={S.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header */}
         <View style={S.headerWrapper}>
           <View style={S.headerTop}>
-            <Text style={[S.headerTitle, { color: colors.label }]}>
-              {activeTab === 'favorites' ? 'Favorites' : 'Travel Diary'}
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.8}
+            <Text style={[S.headerTitle, { color: colors.label }]}>{headerTitle}</Text>
+            <TouchableOpacity activeOpacity={0.8}
               onPress={() => { Haptics.selectionAsync(); setShowDropdown((p) => !p); }}
             >
               <View style={S.avatarButton}>
@@ -465,17 +570,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
               </View>
             </TouchableOpacity>
           </View>
-          <Text style={[S.headerSubtitle, { color: colors.secondaryLabel }]}>
-            {activeTab === 'favorites'
-              ? `${entries.filter((e) => e.isFavorite).length} favorite ${entries.filter((e) => e.isFavorite).length === 1 ? 'memory' : 'memories'}`
-              : entries.length === 0 ? 'Start your journey' : `${entries.length} ${entries.length === 1 ? 'memory' : 'memories'} captured`}
-          </Text>
+          <Text style={[S.headerSubtitle, { color: colors.secondaryLabel }]}>{headerSubtitle}</Text>
         </View>
 
-        {/* Content */}
         {displayedEntries.length === 0 ? (
           <>
-            <EmptyState scheme={scheme} isFavorites={activeTab === 'favorites'} />
+            <EmptyState scheme={scheme} isFolders={activeTab === 'folders'} />
             {activeTab === 'home' && (
               <CTAButton label="Add Your First Memory" scheme={scheme} isPrimary onPress={onAddEntry} />
             )}
@@ -483,7 +583,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         ) : (
           <>
             <Text style={[S.sectionTitle, { color: colors.label }]}>
-              {activeTab === 'favorites' ? 'Your Favorites' : 'Memories'}
+              {activeTab === 'folders' ? 'Favorites' : 'Memories'}
             </Text>
             {displayedEntries.map((item) => (
               <EntryCard
@@ -501,7 +601,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         )}
       </ScrollView>
 
-      {/* Profile Dropdown */}
       {showDropdown && (
         <ProfileDropdown scheme={scheme} onClose={() => setShowDropdown(false)} onLogout={onLogout} />
       )}
@@ -513,10 +612,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           scheme={scheme}
           onClose={() => setContextEntry(null)}
           onFavorite={() => setConfirmFav(contextEntry)}
-          onAddToFolder={() => { onMoveToFolder(contextEntry.id, undefined); setContextEntry(null); }}
+          onAddToFolder={() => {
+            // Keep a ref so FolderPicker can use it after contextEntry is cleared
+            setFolderPickEntry(contextEntry);
+            setContextEntry(null);
+          }}
           onDelete={() => setContextEntry(null)}
         />
       )}
+
+      {/* Folder Picker Sheet */}
+      <FolderPickerModal
+        visible={!!folderPickEntry}
+        entry={folderPickEntry}
+        folders={folders}
+        scheme={scheme}
+        onMove={onMoveToFolder}
+        onClose={() => setFolderPickEntry(null)}
+      />
 
       {/* Confirm Favorite */}
       <ConfirmModal
@@ -524,7 +637,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         title={confirmFav?.isFavorite ? 'Remove from Favorites?' : 'Add to Favorites?'}
         body={confirmFav?.isFavorite
           ? 'This memory will be removed from your Favorites.'
-          : 'This memory will appear in your Favorites tab.'}
+          : 'This memory will be added to Favorites. It can still be in a folder too.'}
         iconName={confirmFav?.isFavorite ? 'heart-dislike' : 'heart'}
         iconColor={confirmFav?.isFavorite ? palette[scheme].destructive : '#FF9500'}
         iconBg={confirmFav?.isFavorite ? 'rgba(255,59,48,0.10)' : 'rgba(255,149,0,0.10)'}
@@ -535,7 +648,6 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         onConfirm={() => { if (confirmFav) onToggleFavorite(confirmFav.id); setConfirmFav(null); }}
       />
 
-      {/* Floating Nav */}
       <FloatingCapsuleNav
         activeTab={activeTab}
         scheme={scheme}
@@ -543,6 +655,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
         onTabPress={setActiveTab}
         onAddPress={onAddEntry}
         onSearchPress={onSearchPress}
+        onFoldersPress={onFoldersPress}
       />
     </View>
   );

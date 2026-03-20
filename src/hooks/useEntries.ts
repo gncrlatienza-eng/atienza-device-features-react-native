@@ -10,7 +10,7 @@ export interface TravelEntry {
   note?:      string;
   timestamp:  number;
   isFavorite: boolean;
-  folderId?:  string;
+  folderId?:  string;   // which folder the entry lives in (independent of isFavorite)
 }
 
 export interface Folder {
@@ -35,7 +35,7 @@ export const useEntries = () => {
   const [folders,  setFolders]  = useState<Folder[]>(DEFAULT_FOLDERS);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // ── Load ────────────────────────────────────────────────────────────────────
+  // ── Load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -58,55 +58,50 @@ export const useEntries = () => {
     load();
   }, []);
 
-  // ── Persist entries ─────────────────────────────────────────────────────────
+  // ── Persist entries ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isLoaded) return;
     AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(entries)).catch(console.error);
   }, [entries, isLoaded]);
 
-  // ── Persist folders ─────────────────────────────────────────────────────────
+  // ── Persist folders ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isLoaded) return;
     AsyncStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)).catch(console.error);
   }, [folders, isLoaded]);
 
-  // ── Entry Actions ───────────────────────────────────────────────────────────
+  // ── addEntry ───────────────────────────────────────────────────────────────
   const addEntry = useCallback((entry: TravelEntry) => {
     setEntries((prev) => [entry, ...prev]);
   }, []);
 
+  // ── deleteEntry ────────────────────────────────────────────────────────────
   const deleteEntry = useCallback((id: string) => {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  // ── toggleFavorite ─────────────────────────────────────────────────────────
+  // Only flips isFavorite. Does NOT touch folderId — an entry can be in any
+  // folder AND be a favourite at the same time (iOS Photos behaviour).
   const toggleFavorite = useCallback((id: string) => {
     setEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== id) return e;
-        const nowFavorite = !e.isFavorite;
-        return {
-          ...e,
-          isFavorite: nowFavorite,
-          folderId:   nowFavorite
-            ? FAVORITES_FOLDER_ID
-            : e.folderId === FAVORITES_FOLDER_ID
-              ? undefined
-              : e.folderId,
-        };
-      }),
+      prev.map((e) =>
+        e.id === id ? { ...e, isFavorite: !e.isFavorite } : e,
+      ),
     );
   }, []);
 
+  // ── moveToFolder ───────────────────────────────────────────────────────────
+  // Assigns (or clears) the folder for an entry. Never touches isFavorite.
   const moveToFolder = useCallback((entryId: string, folderId: string | undefined) => {
     setEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== entryId) return e;
-        const isFavorite = folderId === FAVORITES_FOLDER_ID ? true : e.isFavorite;
-        return { ...e, folderId, isFavorite };
-      }),
+      prev.map((e) =>
+        e.id === entryId ? { ...e, folderId } : e,
+      ),
     );
   }, []);
 
+  // ── createFolder ───────────────────────────────────────────────────────────
   const createFolder = useCallback((name: string): Folder => {
     const folder: Folder = {
       id:        `folder_${Date.now()}`,
@@ -117,10 +112,14 @@ export const useEntries = () => {
     return folder;
   }, []);
 
+  // ── deleteFolder ───────────────────────────────────────────────────────────
   const deleteFolder = useCallback((folderId: string) => {
     setFolders((prev) => prev.filter((f) => f.id !== folderId));
+    // Unassign entries that were in this folder; keep isFavorite untouched
     setEntries((prev) =>
-      prev.map((e) => (e.folderId === folderId ? { ...e, folderId: undefined } : e)),
+      prev.map((e) =>
+        e.folderId === folderId ? { ...e, folderId: undefined } : e,
+      ),
     );
   }, []);
 

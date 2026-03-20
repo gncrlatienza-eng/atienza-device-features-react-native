@@ -1,22 +1,22 @@
 import { StyleSheet, Dimensions, Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
-const COLUMN_GAP  = 12;
-const COLUMNS     = 2;
-export const FOLDER_CARD_WIDTH = (width - 32 - COLUMN_GAP) / COLUMNS;
+const COLUMN_GAP           = 16;
+const COLUMNS              = 2;
+const H_PADDING            = 16;
+export const FOLDER_CARD_WIDTH = (width - H_PADDING * 2 - COLUMN_GAP) / COLUMNS;
 
 export const foldersScreenStyles = StyleSheet.create({
   container:     { flex: 1 },
-  scrollContent: { paddingHorizontal: 16, paddingBottom: 120 },
+  scrollContent: { paddingHorizontal: H_PADDING, paddingBottom: 120 },
 
-  // ── Header ────────────────────────────────────────────────────────────────────
-  headerWrapper: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 16 },
+  // ── Header ───────────────────────────────────────────────────────────────────
+  headerWrapper: { paddingTop: 60, paddingHorizontal: 4, paddingBottom: 20 },
 
   headerTop: {
     flexDirection:  'row',
     alignItems:     'center',
     justifyContent: 'space-between',
-    marginBottom:   4,
   },
 
   headerTitle: {
@@ -24,12 +24,14 @@ export const foldersScreenStyles = StyleSheet.create({
     fontWeight:    '700',
     letterSpacing: 0.37,
     fontFamily:    Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    flex:          1,
   },
 
   headerSubtitle: {
-    fontSize:      15,
-    fontWeight:    '400',
-    opacity:       0.55,
+    fontSize:  15,
+    fontWeight: '400',
+    opacity:   0.55,
+    marginTop: 4,
   },
 
   newFolderButton: {
@@ -51,7 +53,7 @@ export const foldersScreenStyles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap:      'wrap',
     gap:           COLUMN_GAP,
-    paddingTop:    8,
+    paddingTop:    4,
   },
 
   folderCard: {
@@ -62,7 +64,40 @@ export const foldersScreenStyles = StyleSheet.create({
   },
 
   folderCardBlur: {
-    padding: 16,
+    padding: 12,
+  },
+
+  // ── Thumbnail area ────────────────────────────────────────────────────────────
+  // Container for the thumbnail grid at the top of each card
+  folderThumbRow: {
+    width:         '100%',
+    height:        FOLDER_CARD_WIDTH * 0.65,   // proportional to card width
+    flexDirection: 'row',
+    flexWrap:      'wrap',
+    borderRadius:  10,
+    overflow:      'hidden',
+    marginBottom:  10,
+  },
+
+  // Used when folder has exactly 0 or 1 entry
+  folderSingleThumb: {
+    width:          '100%',
+    height:         '100%',
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
+
+  // Each thumbnail when 2-4 entries exist (quarter of the grid)
+  folderThumb: {
+    width:  '50%',
+    height: '50%',
+  },
+
+  folderThumbPlaceholder: {
+    width:          '50%',
+    height:         '50%',
+    alignItems:     'center',
+    justifyContent: 'center',
   },
 
   folderIconWrapper: {
@@ -84,37 +119,6 @@ export const foldersScreenStyles = StyleSheet.create({
     gap:           1,
   },
 
-  // Thumbnail row container (shown at top of each folder card)
-  folderThumbRow: {
-    width:         '100%',
-    height:        90,
-    flexDirection: 'row',
-    flexWrap:      'wrap',
-    borderRadius:  10,
-    overflow:      'hidden',
-    marginBottom:  12,
-  },
-
-  // Full-size thumb when folder has exactly 1 entry
-  folderSingleThumb: {
-    width:        '100%',
-    height:       90,
-    borderRadius: 10,
-    overflow:     'hidden',
-  },
-
-  folderThumb: {
-    width:  25,
-    height: 25,
-  },
-
-  folderThumbPlaceholder: {
-    width:          25,
-    height:         25,
-    alignItems:     'center',
-    justifyContent: 'center',
-  },
-
   folderName: {
     fontSize:      15,
     fontWeight:    '600',
@@ -128,13 +132,13 @@ export const foldersScreenStyles = StyleSheet.create({
     opacity:    0.55,
   },
 
-  // ── New Folder Modal ──────────────────────────────────────────────────────────
+  // ── Modal ─────────────────────────────────────────────────────────────────────
   modalBackdrop: {
-    flex:               1,
-    backgroundColor:    'rgba(0,0,0,0.45)',
-    alignItems:         'center',
-    justifyContent:     'center',
-    paddingHorizontal:  32,
+    flex:              1,
+    backgroundColor:   'rgba(0,0,0,0.45)',
+    alignItems:        'center',
+    justifyContent:    'center',
+    paddingHorizontal: 32,
   },
 
   modalCard: {
@@ -160,11 +164,14 @@ export const foldersScreenStyles = StyleSheet.create({
   },
 
   modalInput: {
-    width:        '100%',
-    borderRadius: 12,
-    overflow:     'hidden',
-    borderWidth:  0.5,
-    marginBottom: 20,
+    width:             '100%',
+    borderRadius:      12,
+    overflow:          'hidden',
+    borderWidth:       0.5,
+    marginBottom:      20,
+    paddingHorizontal: 14,
+    paddingVertical:   13,
+    fontSize:          16,
   },
 
   modalInputBlur: {
@@ -188,7 +195,7 @@ export const foldersScreenStyles = StyleSheet.create({
   modalActionBold:      { fontSize: 17, fontWeight: '600' },
 
   // ── Empty ─────────────────────────────────────────────────────────────────────
-  emptyContainer: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyContainer: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 40 },
   emptyTitle:     { fontSize: 18, fontWeight: '600', textAlign: 'center', marginBottom: 8, marginTop: 16 },
   emptyBody:      { fontSize: 14, textAlign: 'center', lineHeight: 20, opacity: 0.50 },
 });
