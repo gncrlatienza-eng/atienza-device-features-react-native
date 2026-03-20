@@ -10,21 +10,23 @@ export interface TravelEntry {
   note?:      string;
   timestamp:  number;
   isFavorite: boolean;
-  folderIds:  string[];
+  folderId?:  string;
 }
 
 export interface Folder {
   id:        string;
   name:      string;
   createdAt: number;
-  isDefault: boolean;
+  isSystem?: boolean;
 }
 
 const ENTRIES_KEY = '@travel_diary_entries';
 const FOLDERS_KEY = '@travel_diary_folders';
 
-const DEFAULT_FOLDERS: Folder[] = [
-  { id: 'favorites', name: 'Favorites', createdAt: 0, isDefault: true },
+export const FAVORITES_FOLDER_ID = 'system_favorites';
+
+export const DEFAULT_FOLDERS: Folder[] = [
+  { id: FAVORITES_FOLDER_ID, name: 'Favorites', createdAt: 0, isSystem: true },
 ];
 
 // ─── Hook: useEntries ─────────────────────────────────────────────────────────
@@ -33,7 +35,7 @@ export const useEntries = () => {
   const [folders,  setFolders]  = useState<Folder[]>(DEFAULT_FOLDERS);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // ── Load from storage ───────────────────────────────────────────────────────
+  // ── Load ────────────────────────────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -42,9 +44,13 @@ export const useEntries = () => {
           AsyncStorage.getItem(FOLDERS_KEY),
         ]);
         if (storedEntries) setEntries(JSON.parse(storedEntries));
-        if (storedFolders) setFolders(JSON.parse(storedFolders));
-      } catch (err) {
-        console.error('Failed to load data:', err);
+        if (storedFolders) {
+          const parsed: Folder[] = JSON.parse(storedFolders);
+          const hasSystem = parsed.some((f) => f.id === FAVORITES_FOLDER_ID);
+          setFolders(hasSystem ? parsed : [...DEFAULT_FOLDERS, ...parsed]);
+        }
+      } catch (error) {
+        console.error('Failed to load data:', error);
       } finally {
         setIsLoaded(true);
       }
@@ -78,51 +84,43 @@ export const useEntries = () => {
       prev.map((e) => {
         if (e.id !== id) return e;
         const nowFavorite = !e.isFavorite;
-        const folderIds   = nowFavorite
-          ? Array.from(new Set([...e.folderIds, 'favorites']))
-          : e.folderIds.filter((fid) => fid !== 'favorites');
-        return { ...e, isFavorite: nowFavorite, folderIds };
+        return {
+          ...e,
+          isFavorite: nowFavorite,
+          folderId:   nowFavorite
+            ? FAVORITES_FOLDER_ID
+            : e.folderId === FAVORITES_FOLDER_ID
+              ? undefined
+              : e.folderId,
+        };
       }),
     );
   }, []);
 
-  const addEntryToFolder = useCallback((entryId: string, folderId: string) => {
+  const moveToFolder = useCallback((entryId: string, folderId: string | undefined) => {
     setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? { ...e, folderIds: Array.from(new Set([...e.folderIds, folderId])) }
-          : e,
-      ),
+      prev.map((e) => {
+        if (e.id !== entryId) return e;
+        const isFavorite = folderId === FAVORITES_FOLDER_ID ? true : e.isFavorite;
+        return { ...e, folderId, isFavorite };
+      }),
     );
   }, []);
 
-  const removeEntryFromFolder = useCallback((entryId: string, folderId: string) => {
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? { ...e, folderIds: e.folderIds.filter((fid) => fid !== folderId) }
-          : e,
-      ),
-    );
-  }, []);
-
-  // ── Folder Actions ──────────────────────────────────────────────────────────
   const createFolder = useCallback((name: string): Folder => {
     const folder: Folder = {
       id:        `folder_${Date.now()}`,
       name:      name.trim(),
       createdAt: Date.now(),
-      isDefault: false,
     };
     setFolders((prev) => [...prev, folder]);
     return folder;
   }, []);
 
   const deleteFolder = useCallback((folderId: string) => {
-    if (folderId === 'favorites') return; // cannot delete default
     setFolders((prev) => prev.filter((f) => f.id !== folderId));
     setEntries((prev) =>
-      prev.map((e) => ({ ...e, folderIds: e.folderIds.filter((fid) => fid !== folderId) })),
+      prev.map((e) => (e.folderId === folderId ? { ...e, folderId: undefined } : e)),
     );
   }, []);
 
@@ -133,8 +131,7 @@ export const useEntries = () => {
     addEntry,
     deleteEntry,
     toggleFavorite,
-    addEntryToFolder,
-    removeEntryFromFolder,
+    moveToFolder,
     createFolder,
     deleteFolder,
   };

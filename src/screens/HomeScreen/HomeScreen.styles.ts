@@ -1,141 +1,239 @@
-import { useCallback, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { StyleSheet, Dimensions, Platform } from 'react-native';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-export interface TravelEntry {
-  id:         string;
-  imageUri:   string;
-  address:    string;
-  title:      string;
-  note?:      string;
-  timestamp:  number;
-  isFavorite: boolean;
-  folderIds:  string[];
-}
+const { width } = Dimensions.get('window');
 
-export interface Folder {
-  id:        string;
-  name:      string;
-  createdAt: number;
-  isDefault: boolean;
-}
+export const CARD_WIDTH    = width - 32;
+export const CARD_HEIGHT   = 220;
+export const BORDER_RADIUS = 20;
 
-const ENTRIES_KEY = '@travel_diary_entries';
-const FOLDERS_KEY = '@travel_diary_folders';
+// ─── Design Tokens ────────────────────────────────────────────────────────────
+export const glassTokens = {
+  light: {
+    background:    'rgba(255, 255, 255, 0.45)',
+    border:        'rgba(255, 255, 255, 0.70)',
+    overlay:       'rgba(255, 255, 255, 0.18)',
+    navBorder:     'rgba(160, 160, 170, 0.35)',
+    tint:          'light' as const,
+  },
+  dark: {
+    background:    'rgba(28, 28, 32, 0.60)',
+    border:        'rgba(255, 255, 255, 0.10)',
+    overlay:       'rgba(0, 0, 0, 0.32)',
+    navBorder:     'rgba(255, 255, 255, 0.20)',
+    tint:          'dark' as const,
+  },
+} as const;
 
-const DEFAULT_FOLDERS: Folder[] = [
-  { id: 'favorites', name: 'Favorites', createdAt: 0, isDefault: true },
-];
+export const palette = {
+  light: {
+    systemBackground:    '#F2F2F7',
+    secondaryBackground: '#FFFFFF',
+    label:               '#000000',
+    secondaryLabel:      '#3C3C43',
+    tertiaryLabel:       '#8E8E93',
+    accent:              '#007AFF',
+    destructive:         '#FF3B30',
+    separator:           'rgba(60, 60, 67, 0.10)',
+  },
+  dark: {
+    systemBackground:    '#000000',
+    secondaryBackground: '#1C1C1E',
+    label:               '#FFFFFF',
+    secondaryLabel:      '#EBEBF5',
+    tertiaryLabel:       '#8E8E93',
+    accent:              '#0A84FF',
+    destructive:         '#FF453A',
+    separator:           'rgba(84, 84, 88, 0.55)',
+  },
+} as const;
 
-// ─── Hook: useEntries ─────────────────────────────────────────────────────────
-export const useEntries = () => {
-  const [entries,  setEntries]  = useState<TravelEntry[]>([]);
-  const [folders,  setFolders]  = useState<Folder[]>(DEFAULT_FOLDERS);
-  const [isLoaded, setIsLoaded] = useState(false);
+export type ColorScheme = keyof typeof palette;
 
-  // ── Load from storage ───────────────────────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [storedEntries, storedFolders] = await Promise.all([
-          AsyncStorage.getItem(ENTRIES_KEY),
-          AsyncStorage.getItem(FOLDERS_KEY),
-        ]);
-        if (storedEntries) setEntries(JSON.parse(storedEntries));
-        if (storedFolders) setFolders(JSON.parse(storedFolders));
-      } catch (err) {
-        console.error('Failed to load data:', err);
-      } finally {
-        setIsLoaded(true);
-      }
-    };
-    load();
-  }, []);
+// ─── Platform Shadow Helper ───────────────────────────────────────────────────
+export const createShadow = (
+  color   = '#000',
+  opacity = 0.10,
+  radius  = 12,
+  offsetY = 4,
+) =>
+  Platform.select({
+    ios: {
+      shadowColor:   color,
+      shadowOffset:  { width: 0, height: offsetY },
+      shadowOpacity: opacity,
+      shadowRadius:  radius,
+    },
+    android: { elevation: Math.round(radius / 2) },
+  });
 
-  // ── Persist entries ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isLoaded) return;
-    AsyncStorage.setItem(ENTRIES_KEY, JSON.stringify(entries)).catch(console.error);
-  }, [entries, isLoaded]);
+// ─── HomeScreen Styles ────────────────────────────────────────────────────────
+export const homeScreenStyles = StyleSheet.create({
+  container:     { flex: 1 },
+  scrollContent: { paddingTop: 8, paddingBottom: 160 },
 
-  // ── Persist folders ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isLoaded) return;
-    AsyncStorage.setItem(FOLDERS_KEY, JSON.stringify(folders)).catch(console.error);
-  }, [folders, isLoaded]);
+  // ── Header ───────────────────────────────────────────────────────────────────
+  headerWrapper: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12 },
 
-  // ── Entry Actions ───────────────────────────────────────────────────────────
-  const addEntry = useCallback((entry: TravelEntry) => {
-    setEntries((prev) => [entry, ...prev]);
-  }, []);
+  headerTop: {
+    flexDirection:  'row',
+    alignItems:     'center',
+    justifyContent: 'space-between',
+    marginBottom:   4,
+  },
 
-  const deleteEntry = useCallback((id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
-  }, []);
+  headerTitle: {
+    fontSize:      34,
+    fontWeight:    '700',
+    letterSpacing: 0.37,
+    fontFamily:    Platform.OS === 'ios' ? 'System' : 'sans-serif',
+  },
 
-  const toggleFavorite = useCallback((id: string) => {
-    setEntries((prev) =>
-      prev.map((e) => {
-        if (e.id !== id) return e;
-        const nowFavorite = !e.isFavorite;
-        const folderIds   = nowFavorite
-          ? Array.from(new Set([...e.folderIds, 'favorites']))
-          : e.folderIds.filter((fid) => fid !== 'favorites');
-        return { ...e, isFavorite: nowFavorite, folderIds };
-      }),
-    );
-  }, []);
+  headerSubtitle: { fontSize: 15, fontWeight: '400', letterSpacing: -0.08 },
 
-  const addEntryToFolder = useCallback((entryId: string, folderId: string) => {
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? { ...e, folderIds: Array.from(new Set([...e.folderIds, folderId])) }
-          : e,
-      ),
-    );
-  }, []);
+  avatarButton: {
+    width:           44,
+    height:          44,
+    borderRadius:    22,
+    borderWidth:     0.5,
+    borderColor:     'rgba(0, 0, 0, 0.12)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    alignItems:      'center',
+    justifyContent:  'center',
+    ...createShadow('#000', 0.08, 8, 2),
+  },
 
-  const removeEntryFromFolder = useCallback((entryId: string, folderId: string) => {
-    setEntries((prev) =>
-      prev.map((e) =>
-        e.id === entryId
-          ? { ...e, folderIds: e.folderIds.filter((fid) => fid !== folderId) }
-          : e,
-      ),
-    );
-  }, []);
+  avatarInitials: { fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
 
-  // ── Folder Actions ──────────────────────────────────────────────────────────
-  const createFolder = useCallback((name: string): Folder => {
-    const folder: Folder = {
-      id:        `folder_${Date.now()}`,
-      name:      name.trim(),
-      createdAt: Date.now(),
-      isDefault: false,
-    };
-    setFolders((prev) => [...prev, folder]);
-    return folder;
-  }, []);
+  // ── Dropdown ──────────────────────────────────────────────────────────────────
+  dropdownBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
 
-  const deleteFolder = useCallback((folderId: string) => {
-    if (folderId === 'favorites') return; // cannot delete default
-    setFolders((prev) => prev.filter((f) => f.id !== folderId));
-    setEntries((prev) =>
-      prev.map((e) => ({ ...e, folderIds: e.folderIds.filter((fid) => fid !== folderId) })),
-    );
-  }, []);
+  dropdownWrapper: {
+    position:     'absolute',
+    top:          112,
+    right:        20,
+    width:        220,
+    borderRadius: 16,
+    overflow:     'hidden',
+    borderWidth:  0.5,
+    zIndex:       20,
+    ...createShadow('#000', 0.20, 24, 8),
+  },
 
-  return {
-    entries,
-    folders,
-    isLoaded,
-    addEntry,
-    deleteEntry,
-    toggleFavorite,
-    addEntryToFolder,
-    removeEntryFromFolder,
-    createFolder,
-    deleteFolder,
-  };
-};
+  dropdownBlur:       { paddingVertical: 8 },
+  dropdownThemeRow:   { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
+  dropdownThemeLabel: { flex: 1, fontSize: 15, fontWeight: '500', letterSpacing: -0.2 },
+  dropdownItem:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, gap: 12 },
+  dropdownItemLabel:  { fontSize: 15, fontWeight: '500', letterSpacing: -0.2 },
+  dropdownSeparator:  { height: 0.5, marginHorizontal: 16 },
+
+  toggleTrack: { width: 44, height: 26, borderRadius: 13, justifyContent: 'center', paddingHorizontal: 3 },
+  toggleThumb: { width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFFFFF', ...createShadow('#000', 0.20, 4, 2) },
+
+  // ── Entry Card ────────────────────────────────────────────────────────────────
+  entryCard: {
+    width:        CARD_WIDTH,
+    height:       CARD_HEIGHT,
+    borderRadius: BORDER_RADIUS,
+    overflow:     'hidden',
+    alignSelf:    'center',
+    marginBottom: 16,
+    borderWidth:  0.5,
+    ...createShadow('#000', 0.14, 20, 6),
+  },
+
+  entryImage:       { ...StyleSheet.absoluteFillObject },
+  entryPlaceholder: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
+
+  entryOverlay: {
+    position:          'absolute',
+    bottom:            0,
+    left:              0,
+    right:             0,
+    paddingHorizontal: 16,
+    paddingVertical:   14,
+    borderTopWidth:    0.5,
+  },
+
+  entryTitle:      { fontSize: 17, fontWeight: '700', color: '#FFFFFF', letterSpacing: -0.3, marginBottom: 4 },
+  entryAddressRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 },
+  entryAddress:    { fontSize: 13, fontWeight: '500', color: 'rgba(255,255,255,0.85)', letterSpacing: -0.1, flex: 1 },
+  entryDate:       { fontSize: 12, fontWeight: '400', color: 'rgba(255,255,255,0.60)' },
+
+  // Favorite badge — top left
+  favoriteBadge: {
+    position:        'absolute',
+    top:             12,
+    left:            12,
+    width:           26,
+    height:          26,
+    borderRadius:    13,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems:      'center',
+    justifyContent:  'center',
+    zIndex:          5,
+  },
+
+  // 3-dot button — top right
+  dotsButton: {
+    position:     'absolute',
+    top:          12,
+    right:        12,
+    width:        30,
+    height:       30,
+    borderRadius: 15,
+    overflow:     'hidden',
+    borderWidth:  0.5,
+    zIndex:       5,
+  },
+
+  dotsBlur: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Alias for older code referencing menuButton/menuBlur
+  menuButton: {
+    position:     'absolute',
+    top:          12,
+    right:        12,
+    width:        30,
+    height:       30,
+    borderRadius: 15,
+    overflow:     'hidden',
+    borderWidth:  0.5,
+    zIndex:       5,
+  },
+
+  menuBlur: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  heartButton: { position: 'absolute', top: 12, right: 12, width: 34, height: 34, borderRadius: 17, overflow: 'hidden', borderWidth: 0.5, zIndex: 5 },
+  heartBlur:   { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // ── Section / CTA / Empty ─────────────────────────────────────────────────────
+  sectionTitle: { fontSize: 22, fontWeight: '700', letterSpacing: 0.35, marginTop: 24, marginBottom: 12, paddingHorizontal: 20 },
+
+  ctaWrapper: { marginHorizontal: 16, marginTop: 8, borderRadius: 100, overflow: 'hidden', ...createShadow('#000', 0.10, 10, 4) },
+  ctaBlur:    { alignItems: 'center', justifyContent: 'center', paddingVertical: 17 },
+  ctaLabel:   { fontSize: 15, fontWeight: '600', letterSpacing: -0.3 },
+
+  emptyContainer:   { alignItems: 'center', paddingTop: 80, paddingHorizontal: 40 },
+  emptyIconWrapper: { width: 120, height: 120, borderRadius: 34, overflow: 'hidden', marginBottom: 24, borderWidth: 0.5 },
+  emptyIconBlur:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle:       { fontSize: 22, fontWeight: '700', textAlign: 'center', marginBottom: 10, letterSpacing: 0.2 },
+  emptyBody:        { fontSize: 15, textAlign: 'center', lineHeight: 22, opacity: 0.50, marginBottom: 32 },
+
+  // ── Floating Capsule Nav ──────────────────────────────────────────────────────
+  navWrapper: {
+    position:     'absolute',
+    alignSelf:    'center',
+    borderRadius: 40,
+    overflow:     'hidden',
+    borderWidth:  0.8,
+    ...createShadow('#000', 0.10, 28, 6),
+  },
+
+  navBlur:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6 },
+  navItemWrapper:  { alignItems: 'center', justifyContent: 'center', width: 68, paddingVertical: 4 },
+  navIconButton:   { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  navLabel:        { fontSize: 10, fontWeight: '500', marginTop: 2, letterSpacing: 0.1 },
+  plusButton:      { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', borderWidth: 0.5, alignItems: 'center', justifyContent: 'center' },
+  plusBlur:        { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  searchNavButton: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+});

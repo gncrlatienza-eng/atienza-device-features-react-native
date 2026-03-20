@@ -2,22 +2,22 @@ import { StyleSheet, Platform } from 'react-native';
 
 export const loginStyles = StyleSheet.create({
   container: {
-    flex:           1,
-    alignItems:     'center',
-    justifyContent: 'center',
+    flex:              1,
+    alignItems:        'center',
+    justifyContent:    'center',
     paddingHorizontal: 32,
   },
 
   // ── Logo ──────────────────────────────────────────────────────────────────────
   logoWrapper: {
-    width:        88,
-    height:       88,
-    borderRadius: 26,
-    overflow:     'hidden',
-    borderWidth:  0.5,
-    marginBottom: 24,
-    alignItems:   'center',
+    width:          96,
+    height:         96,
+    borderRadius:   28,
+    overflow:       'hidden',
+    borderWidth:    0.5,
+    alignItems:     'center',
     justifyContent: 'center',
+    marginBottom:   24,
   },
 
   logoBlur: {
@@ -32,7 +32,7 @@ export const loginStyles = StyleSheet.create({
     fontWeight:    '700',
     letterSpacing: 0.37,
     textAlign:     'center',
-    marginBottom:  6,
+    marginBottom:  8,
     fontFamily:    Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 
@@ -53,28 +53,41 @@ export const loginStyles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  formBlur: {
-    paddingHorizontal: 20,
-    paddingVertical:   6,
+  formCardBlur: {
+    paddingVertical: 4,
   },
 
   inputRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
-    paddingVertical: 14,
-    gap: 12,
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 16,
+    paddingVertical:   14,
+    gap:               12,
   },
 
   inputDivider: {
     height:           0.5,
-    marginHorizontal: 0,
+    marginHorizontal: 16,
   },
 
   textInput: {
-    flex:          1,
-    fontSize:      16,
-    fontWeight:    '400',
-    letterSpacing: -0.1,
+    flex:       1,
+    fontSize:   16,
+    fontWeight: '400',
+  },
+
+  // ── Error ─────────────────────────────────────────────────────────────────────
+  errorRow: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    gap:               6,
+    marginBottom:      16,
+    paddingHorizontal: 4,
+  },
+
+  errorText: {
+    fontSize:   13,
+    fontWeight: '400',
   },
 
   // ── Login Button ──────────────────────────────────────────────────────────────
@@ -85,33 +98,29 @@ export const loginStyles = StyleSheet.create({
     borderWidth:  0.5,
   },
 
-  loginBlur: {
+  loginButtonBlur: {
     alignItems:     'center',
     justifyContent: 'center',
     paddingVertical: 17,
   },
 
-  loginLabel: {
+  loginButtonLabel: {
     fontSize:      17,
     fontWeight:    '600',
     letterSpacing: -0.4,
     color:         '#FFFFFF',
   },
 
-  // ── Error ─────────────────────────────────────────────────────────────────────
-  errorText: {
-    fontSize:   13,
-    fontWeight: '400',
-    textAlign:  'center',
-    marginTop:  12,
+  // ── Footer ────────────────────────────────────────────────────────────────────
+  footer: {
+    position:  'absolute',
+    bottom:    32,
+    alignSelf: 'center',
   },
 
-  // ── Credentials hint ─────────────────────────────────────────────────────────
-  hintText: {
+  footerText: {
     fontSize:   12,
     fontWeight: '400',
-    textAlign:  'center',
-    opacity:    0.40,
-    marginTop:  24,
+    opacity:    0.35,
   },
 });

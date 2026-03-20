@@ -39,7 +39,7 @@ interface HomeScreenProps {
   onAddEntry:         () => void;
   onSelectEntry:      (entry: TravelEntry) => void;
   onToggleFavorite:   (id: string) => void;
-  onAddToFolder:      (entry: TravelEntry) => void;
+  onMoveToFolder:     (entryId: string, folderId: string | undefined) => void;
   onSearchPress:      () => void;
   onFoldersPress:     () => void;
   onLogout:           () => void;
@@ -428,7 +428,7 @@ const FloatingCapsuleNav: React.FC<{
 // ─── Screen: HomeScreen ───────────────────────────────────────────────────────
 const HomeScreen: React.FC<HomeScreenProps> = ({
   entries, folders, onAddEntry, onSelectEntry, onToggleFavorite,
-  onAddToFolder, onSearchPress, onFoldersPress, onLogout,
+  onMoveToFolder, onSearchPress, onFoldersPress, onLogout,
 }) => {
   const { resolvedScheme }  = useTheme();
   const scheme: ColorScheme = resolvedScheme;
@@ -513,7 +513,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           scheme={scheme}
           onClose={() => setContextEntry(null)}
           onFavorite={() => setConfirmFav(contextEntry)}
-          onAddToFolder={() => { onAddToFolder(contextEntry); setContextEntry(null); }}
+          onAddToFolder={() => { onMoveToFolder(contextEntry.id, undefined); setContextEntry(null); }}
           onDelete={() => setContextEntry(null)}
         />
       )}
