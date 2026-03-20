@@ -11,20 +11,40 @@ export const foldersScreenStyles = StyleSheet.create({
   scrollContent: { paddingHorizontal: H_PADDING, paddingBottom: 120 },
 
   // ── Header ───────────────────────────────────────────────────────────────────
-  headerWrapper: { paddingTop: 60, paddingHorizontal: 4, paddingBottom: 20 },
+  headerWrapper: {
+    paddingHorizontal: 4,
+    paddingBottom:     16,
+  },
 
+  // Top row: back btn (left) + add btn (right)
   headerTop: {
     flexDirection:  'row',
     alignItems:     'center',
     justifyContent: 'space-between',
+    paddingHorizontal: 4,
+    marginBottom:   8,
   },
 
+  headerBackBtn: {
+    flexDirection: 'row',
+    alignItems:    'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+
+  headerBackLabel: {
+    fontSize:   17,
+    fontWeight: '400',
+    marginLeft: 2,
+  },
+
+  // Large title shown below the top row
   headerTitle: {
     fontSize:      34,
     fontWeight:    '700',
     letterSpacing: 0.37,
     fontFamily:    Platform.OS === 'ios' ? 'System' : 'sans-serif',
-    flex:          1,
+    paddingHorizontal: 8,
   },
 
   headerSubtitle: {
@@ -39,13 +59,14 @@ export const foldersScreenStyles = StyleSheet.create({
     height:       36,
     borderRadius: 18,
     overflow:     'hidden',
-    borderWidth:  0.5,
   },
 
   newFolderBlur: {
     flex:           1,
     alignItems:     'center',
     justifyContent: 'center',
+    borderWidth:    0.5,
+    borderRadius:   18,
   },
 
   // ── Folder Grid ───────────────────────────────────────────────────────────────
@@ -54,6 +75,7 @@ export const foldersScreenStyles = StyleSheet.create({
     flexWrap:      'wrap',
     gap:           COLUMN_GAP,
     paddingTop:    4,
+    paddingHorizontal: 4,
   },
 
   folderCard: {
@@ -68,18 +90,18 @@ export const foldersScreenStyles = StyleSheet.create({
   },
 
   // ── Thumbnail area ────────────────────────────────────────────────────────────
-  // Container for the thumbnail grid at the top of each card
   folderThumbRow: {
-    width:         '100%',
-    height:        FOLDER_CARD_WIDTH * 0.65,   // proportional to card width
-    flexDirection: 'row',
-    flexWrap:      'wrap',
-    borderRadius:  10,
-    overflow:      'hidden',
-    marginBottom:  10,
+    width:          '100%',
+    height:         FOLDER_CARD_WIDTH * 0.62,
+    flexDirection:  'row',
+    flexWrap:       'wrap',
+    borderRadius:   10,
+    overflow:       'hidden',
+    marginBottom:   10,
+    alignItems:     'center',
+    justifyContent: 'center',
   },
 
-  // Used when folder has exactly 0 or 1 entry
   folderSingleThumb: {
     width:          '100%',
     height:         '100%',
@@ -87,7 +109,6 @@ export const foldersScreenStyles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Each thumbnail when 2-4 entries exist (quarter of the grid)
   folderThumb: {
     width:  '50%',
     height: '50%',
@@ -132,7 +153,7 @@ export const foldersScreenStyles = StyleSheet.create({
     opacity:    0.55,
   },
 
-  // ── Modal ─────────────────────────────────────────────────────────────────────
+  // ── Modals ────────────────────────────────────────────────────────────────────
   modalBackdrop: {
     flex:              1,
     backgroundColor:   'rgba(0,0,0,0.45)',
@@ -166,7 +187,6 @@ export const foldersScreenStyles = StyleSheet.create({
   modalInput: {
     width:             '100%',
     borderRadius:      12,
-    overflow:          'hidden',
     borderWidth:       0.5,
     marginBottom:      20,
     paddingHorizontal: 14,
@@ -174,16 +194,8 @@ export const foldersScreenStyles = StyleSheet.create({
     fontSize:          16,
   },
 
-  modalInputBlur: {
-    paddingHorizontal: 14,
-    paddingVertical:   13,
-  },
-
-  modalInputText: {
-    fontSize:   16,
-    fontWeight: '400',
-  },
-
+  modalInputBlur:       { paddingHorizontal: 14, paddingVertical: 13 },
+  modalInputText:       { fontSize: 16, fontWeight: '400' },
   modalDivider:         { height: 0.5, width: '100%' },
   modalActions:         { flexDirection: 'row', width: '100%' },
   modalAction:          { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 16 },

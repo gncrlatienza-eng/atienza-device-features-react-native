@@ -37,23 +37,26 @@ const FolderCard: React.FC<{
   onPress:      () => void;
   onLongPress?: () => void;
 }> = ({ folder, entries, scheme, onPress, onLongPress }) => {
-  const tokens        = glassTokens[scheme];
-  const colors        = palette[scheme];
-  const folderEntries = entries.filter((e) => e.folderId === folder.id);
-  const thumbs        = folderEntries.slice(0, 4);
+  const tokens = glassTokens[scheme];
+  const colors = palette[scheme];
+
+  // Favorites folder counts isFavorite entries; others count by folderId
+  const folderEntries = folder.id === FAVORITES_FOLDER_ID
+    ? entries.filter((e) => e.isFavorite)
+    : entries.filter((e) => e.folderId === folder.id);
+
+  const thumbs = folderEntries.slice(0, 4);
 
   return (
-    <TouchableOpacity onPress={onPress} onLongPress={onLongPress} activeOpacity={0.85}>
-      <BlurView
-        intensity={50}
-        tint={tokens.tint}
-        style={[S.folderCard, { borderColor: tokens.border }]}
-      >
+    <TouchableOpacity onPress={onPress} onLongPress={onLongPress} activeOpacity={0.82}>
+      <BlurView intensity={50} tint={tokens.tint} style={[S.folderCard, { borderColor: tokens.border }]}>
         <View style={S.folderCardBlur}>
-          {/* Thumbnail grid */}
+
+          {/* Thumbnail area */}
           <View style={[S.folderThumbRow, { backgroundColor: scheme === 'dark' ? '#2C2C2E' : '#E5E5EA' }]}>
             {folderEntries.length === 0 ? (
-              <View style={[S.folderSingleThumb, { alignItems: 'center', justifyContent: 'center' }]}>
+              // Empty folder — show icon centred
+              <View style={S.folderSingleThumb}>
                 <Ionicons
                   name={folder.id === FAVORITES_FOLDER_ID ? 'heart' : 'folder'}
                   size={36}
@@ -61,14 +64,16 @@ const FolderCard: React.FC<{
                 />
               </View>
             ) : folderEntries.length === 1 ? (
+              // Single entry
               folderEntries[0].imageUri ? (
                 <Image source={{ uri: folderEntries[0].imageUri }} style={S.folderSingleThumb} resizeMode="cover" />
               ) : (
-                <View style={[S.folderSingleThumb, { alignItems: 'center', justifyContent: 'center' }]}>
+                <View style={S.folderSingleThumb}>
                   <Ionicons name="image-outline" size={32} color={colors.tertiaryLabel} />
                 </View>
               )
             ) : (
+              // 2-4 entries — 2×2 grid
               thumbs.map((entry, i) =>
                 entry.imageUri ? (
                   <Image key={i} source={{ uri: entry.imageUri }} style={S.folderThumb} resizeMode="cover" />
@@ -87,7 +92,7 @@ const FolderCard: React.FC<{
           <Text style={[S.folderName, { color: colors.label }]} numberOfLines={1}>
             {folder.name}
           </Text>
-          <Text style={[S.folderCount, { color: colors.label }]}>
+          <Text style={[S.folderCount, { color: colors.secondaryLabel }]}>
             {folderEntries.length} {folderEntries.length === 1 ? 'memory' : 'memories'}
           </Text>
         </View>
@@ -103,8 +108,8 @@ const NewFolderModal: React.FC<{
   onCreate: (name: string) => void;
   onCancel: () => void;
 }> = ({ visible, scheme, onCreate, onCancel }) => {
-  const tokens  = glassTokens[scheme];
-  const colors  = palette[scheme];
+  const tokens        = glassTokens[scheme];
+  const colors        = palette[scheme];
   const [name, setName] = useState('');
 
   const handleCreate = () => {
@@ -142,11 +147,7 @@ const NewFolderModal: React.FC<{
           <View style={[S.modalDivider, { backgroundColor: colors.separator }]} />
 
           <BlurView intensity={80} tint={tokens.tint} style={S.modalActionRow}>
-            <TouchableOpacity
-              style={S.modalAction}
-              onPress={() => { setName(''); onCancel(); }}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={S.modalAction} onPress={() => { setName(''); onCancel(); }} activeOpacity={0.7}>
               <Text style={[S.modalActionLabel, { color: colors.tertiaryLabel }]}>Cancel</Text>
             </TouchableOpacity>
 
@@ -155,10 +156,7 @@ const NewFolderModal: React.FC<{
             <TouchableOpacity
               style={S.modalAction}
               activeOpacity={0.7}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                handleCreate();
-              }}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); handleCreate(); }}
             >
               <Text style={[S.modalActionLabelBold, { color: name.trim() ? colors.accent : colors.tertiaryLabel }]}>
                 Create
@@ -173,12 +171,7 @@ const NewFolderModal: React.FC<{
 
 // ─── Screen: FoldersScreen ────────────────────────────────────────────────────
 const FoldersScreen: React.FC<FoldersScreenProps> = ({
-  entries,
-  folders,
-  onCreateFolder,
-  onDeleteFolder,
-  onOpenFolder,
-  onClose,
+  entries, folders, onCreateFolder, onDeleteFolder, onOpenFolder, onClose,
 }) => {
   const { resolvedScheme }  = useTheme();
   const scheme: ColorScheme = resolvedScheme ?? 'light';
@@ -195,35 +188,33 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({
         contentContainerStyle={[S.scrollContent, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={S.headerWrapper}>
-          <View style={S.headerTop}>
-            {/* Back button */}
-            <TouchableOpacity onPress={onClose} activeOpacity={0.8} style={{ marginRight: 12 }}>
-              <Ionicons name="chevron-back" size={28} color={colors.accent} />
-            </TouchableOpacity>
+        {/* ── Header ── */}
+        <View style={[S.headerWrapper, { paddingTop: insets.top + 8 }]}>
 
-            <Text style={[S.headerTitle, { color: colors.label, flex: 1 }]}>Folders</Text>
+          {/* Top row: back arrow left, + button right */}
+          <View style={S.headerTop}>
+            <TouchableOpacity onPress={onClose} activeOpacity={0.8} style={S.headerBackBtn}>
+              <Ionicons name="chevron-back" size={26} color={colors.accent} />
+              <Text style={[S.headerBackLabel, { color: colors.accent }]}>Back</Text>
+            </TouchableOpacity>
 
             {/* New folder button */}
             <TouchableOpacity
               onPress={() => { Haptics.selectionAsync(); setShowNewFolder(true); }}
               activeOpacity={0.8}
+              style={S.newFolderButton}
             >
-              <BlurView
-                intensity={50}
-                tint={tokens.tint}
-                style={[S.newFolderButton, { borderColor: tokens.border }]}
-              >
-                <View style={S.newFolderBlur}>
-                  <Ionicons name="add" size={20} color={colors.accent} />
-                </View>
+              <BlurView intensity={50} tint={tokens.tint} style={[S.newFolderBlur, { borderColor: tokens.border }]}>
+                <Ionicons name="add" size={22} color={colors.accent} />
               </BlurView>
             </TouchableOpacity>
           </View>
+
+          {/* Large title below */}
+          <Text style={[S.headerTitle, { color: colors.label }]}>Folders</Text>
         </View>
 
-        {/* Folder grid */}
+        {/* ── Folder Grid ── */}
         <View style={S.folderGrid}>
           {folders.map((folder) => (
             <FolderCard
@@ -233,12 +224,10 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({
               scheme={scheme}
               onPress={() => { Haptics.selectionAsync(); onOpenFolder(folder); }}
               onLongPress={
-                folder.isSystem
-                  ? undefined
-                  : () => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                      setFolderToDelete(folder);
-                    }
+                folder.isSystem ? undefined : () => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  setFolderToDelete(folder);
+                }
               }
             />
           ))}
@@ -253,7 +242,7 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({
         onCancel={() => setShowNewFolder(false)}
       />
 
-      {/* Delete Folder Confirmation */}
+      {/* Delete Confirmation */}
       <Modal
         visible={!!folderToDelete}
         transparent
@@ -272,11 +261,7 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({
             <View style={[S.modalDivider, { backgroundColor: colors.separator }]} />
 
             <BlurView intensity={80} tint={tokens.tint} style={S.modalActionRow}>
-              <TouchableOpacity
-                style={S.modalAction}
-                onPress={() => setFolderToDelete(null)}
-                activeOpacity={0.7}
-              >
+              <TouchableOpacity style={S.modalAction} onPress={() => setFolderToDelete(null)} activeOpacity={0.7}>
                 <Text style={[S.modalActionLabel, { color: colors.accent }]}>Cancel</Text>
               </TouchableOpacity>
 
@@ -286,10 +271,7 @@ const FoldersScreen: React.FC<FoldersScreenProps> = ({
                 style={S.modalAction}
                 activeOpacity={0.7}
                 onPress={() => {
-                  if (folderToDelete) {
-                    onDeleteFolder(folderToDelete.id);
-                    setFolderToDelete(null);
-                  }
+                  if (folderToDelete) { onDeleteFolder(folderToDelete.id); setFolderToDelete(null); }
                   Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
                 }}
               >

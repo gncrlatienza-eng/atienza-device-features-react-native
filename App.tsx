@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -8,12 +9,10 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import { useEntries } from './src/hooks/useEntries';
-import { FAVORITES_FOLDER_ID } from './src/hooks/useEntries';
+import { useEntries, FAVORITES_FOLDER_ID } from './src/hooks/useEntries';
 import { palette, glassTokens } from './src/screens/HomeScreen/HomeScreen.styles';
 import LoginScreen from './src/screens/LoginScreen';
 import HomeScreen from './src/screens/HomeScreen';
@@ -24,42 +23,47 @@ import SearchScreen from './src/screens/SearchScreen';
 import type { TravelEntry, Folder } from './src/hooks/useEntries';
 
 // ─── FolderViewScreen ─────────────────────────────────────────────────────────
-// A clean screen that shows entries for a specific folder with a back button.
+// Rendered as an absoluteFill overlay — avoids the Modal white-flash on dismiss.
 const FolderViewScreen: React.FC<{
-  folder:           Folder;
-  entries:          TravelEntry[];
-  onSelectEntry:    (entry: TravelEntry) => void;
-  onToggleFavorite: (id: string) => void;
-  onClose:          () => void;
-}> = ({ folder, entries, onSelectEntry, onToggleFavorite, onClose }) => {
+  folder:        Folder;
+  entries:       TravelEntry[];
+  onSelectEntry: (entry: TravelEntry) => void;
+  onClose:       () => void;
+}> = ({ folder, entries, onSelectEntry, onClose }) => {
   const { resolvedScheme } = useTheme();
   const scheme             = resolvedScheme ?? 'dark';
   const colors             = palette[scheme];
-  const tokens             = glassTokens[scheme];
   const insets             = useSafeAreaInsets();
 
-  // Favorites folder shows entries where isFavorite=true, others use folderId
   const folderEntries = folder.id === FAVORITES_FOLDER_ID
     ? entries.filter((e) => e.isFavorite)
     : entries.filter((e) => e.folderId === folder.id);
 
   return (
     <View style={[fvStyles.container, { backgroundColor: colors.systemBackground }]}>
-      {/* Header */}
-      <View style={[fvStyles.header, { paddingTop: insets.top + 12 }]}>
-        <TouchableOpacity onPress={onClose} activeOpacity={0.8} style={fvStyles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={colors.accent} />
+
+      {/* ── Navigation bar (matches screenshot style) ── */}
+      <View style={[fvStyles.navBar, { paddingTop: insets.top + 8 }]}>
+        <TouchableOpacity onPress={() => { Haptics.selectionAsync(); onClose(); }} activeOpacity={0.7} style={fvStyles.backBtn}>
+          <Ionicons name="chevron-back" size={26} color={colors.accent} />
           <Text style={[fvStyles.backLabel, { color: colors.accent }]}>Folders</Text>
         </TouchableOpacity>
-        <Text style={[fvStyles.title, { color: colors.label }]} numberOfLines={1}>
+
+        <Text style={[fvStyles.navTitle, { color: colors.label }]} numberOfLines={1}>
           {folder.name}
         </Text>
-        <View style={fvStyles.backBtn} />
+
+        {/* Spacer to balance the back button */}
+        <View style={fvStyles.navRight} />
       </View>
 
-      <Text style={[fvStyles.subtitle, { color: colors.secondaryLabel }]}>
-        {folderEntries.length} {folderEntries.length === 1 ? 'memory' : 'memories'}
-      </Text>
+      {/* ── Large title + count ── */}
+      <View style={fvStyles.titleBlock}>
+        <Text style={[fvStyles.largeTitle, { color: colors.label }]}>{folder.name}</Text>
+        <Text style={[fvStyles.countLabel, { color: colors.secondaryLabel }]}>
+          {folderEntries.length} {folderEntries.length === 1 ? 'memory' : 'memories'}
+        </Text>
+      </View>
 
       {folderEntries.length === 0 ? (
         <View style={fvStyles.empty}>
@@ -73,54 +77,31 @@ const FolderViewScreen: React.FC<{
           </Text>
           <Text style={[fvStyles.emptyBody, { color: colors.secondaryLabel }]}>
             {folder.id === FAVORITES_FOLDER_ID
-              ? 'Tap ··· on any memory and select Add to Favorites.'
-              : 'Tap ··· on any memory and select Add to Folder.'}
+              ? 'Tap ··· on any memory and choose Add to Favorites.'
+              : 'Tap ··· on any memory and choose Add to Folder.'}
           </Text>
         </View>
       ) : (
         <ScrollView
-          contentContainerStyle={[fvStyles.list, { paddingBottom: insets.bottom + 32 }]}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
           showsVerticalScrollIndicator={false}
         >
           {folderEntries.map((entry) => (
             <TouchableOpacity
               key={entry.id}
-              style={[fvStyles.entryRow, { borderBottomColor: colors.separator }]}
-              activeOpacity={0.75}
+              style={[fvStyles.row, { borderBottomColor: colors.separator }]}
+              activeOpacity={0.7}
               onPress={() => { Haptics.selectionAsync(); onSelectEntry(entry); }}
             >
               {/* Thumbnail */}
               <View style={[fvStyles.thumb, { backgroundColor: scheme === 'dark' ? '#2C2C2E' : '#E5E5EA' }]}>
-                {entry.imageUri ? (
-                  <View style={StyleSheet.absoluteFill}>
-                    <View style={{ flex: 1, overflow: 'hidden', borderRadius: 10 }}>
-                      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                        <Text>{/* React Native Image below */}</Text>
-                      </View>
-                    </View>
-                  </View>
-                ) : (
-                  <Ionicons name="image-outline" size={24} color={colors.tertiaryLabel} />
-                )}
-                {entry.imageUri && (
-                  <View style={StyleSheet.absoluteFill}>
-                    {/* Using require-style import isn't possible here; uri is fine */}
-                    <View style={{ flex: 1, borderRadius: 10, overflow: 'hidden', backgroundColor: scheme === 'dark' ? '#2C2C2E' : '#E5E5EA' }}>
-                      <View style={{ flex: 1 }}>
-                        {/* Inline image */}
-                        {React.createElement(require('react-native').Image, {
-                          source: { uri: entry.imageUri },
-                          style: { width: '100%', height: '100%' },
-                          resizeMode: 'cover',
-                        })}
-                      </View>
-                    </View>
-                  </View>
-                )}
+                {entry.imageUri
+                  ? <Image source={{ uri: entry.imageUri }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                  : <Ionicons name="image-outline" size={22} color={colors.tertiaryLabel} />}
               </View>
 
               {/* Info */}
-              <View style={fvStyles.entryInfo}>
+              <View style={fvStyles.info}>
                 <Text style={[fvStyles.entryTitle, { color: colors.label }]} numberOfLines={1}>
                   {entry.title || entry.address.split(',')[0]}
                 </Text>
@@ -132,12 +113,10 @@ const FolderViewScreen: React.FC<{
                 </Text>
               </View>
 
-              {/* Favorite indicator */}
               {entry.isFavorite && (
-                <Ionicons name="heart" size={16} color="#FF453A" style={{ marginLeft: 8 }} />
+                <Ionicons name="heart" size={16} color="#FF453A" style={{ marginRight: 6 }} />
               )}
-
-              <Ionicons name="chevron-forward" size={18} color={colors.tertiaryLabel} style={{ marginLeft: 4 }} />
+              <Ionicons name="chevron-forward" size={18} color={colors.tertiaryLabel} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -147,35 +126,39 @@ const FolderViewScreen: React.FC<{
 };
 
 const fvStyles = StyleSheet.create({
-  container:    { flex: 1 },
-  header:       { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 8 },
-  backBtn:      { flexDirection: 'row', alignItems: 'center', minWidth: 80 },
-  backLabel:    { fontSize: 17, fontWeight: '400', marginLeft: 2 },
-  title:        { flex: 1, fontSize: 17, fontWeight: '700', textAlign: 'center' },
-  subtitle:     { fontSize: 13, paddingHorizontal: 20, marginBottom: 12, opacity: 0.6 },
-  empty:        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
-  emptyTitle:   { fontSize: 18, fontWeight: '600', textAlign: 'center' },
-  emptyBody:    { fontSize: 14, textAlign: 'center', lineHeight: 20, opacity: 0.6 },
-  list:         { paddingHorizontal: 16 },
-  entryRow:     { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5 },
-  thumb:        { width: 56, height: 56, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
-  entryInfo:    { flex: 1 },
-  entryTitle:   { fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  entryAddress: { fontSize: 13, marginBottom: 2 },
-  entryDate:    { fontSize: 12 },
+  container:   { flex: 1 },
+
+  // Nav bar (small title row)
+  navBar:      { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingBottom: 4 },
+  backBtn:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 6, minWidth: 90 },
+  backLabel:   { fontSize: 17, fontWeight: '400', marginLeft: 2 },
+  navTitle:    { flex: 1, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  navRight:    { minWidth: 90 },
+
+  // Large title block below nav bar
+  titleBlock:  { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 12 },
+  largeTitle:  { fontSize: 34, fontWeight: '700', letterSpacing: 0.37 },
+  countLabel:  { fontSize: 15, marginTop: 2, opacity: 0.6 },
+
+  // Empty state
+  empty:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 40, gap: 12 },
+  emptyTitle:  { fontSize: 18, fontWeight: '600', textAlign: 'center' },
+  emptyBody:   { fontSize: 14, textAlign: 'center', lineHeight: 20, opacity: 0.6 },
+
+  // Entry rows
+  row:         { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 0.5 },
+  thumb:       { width: 56, height: 56, borderRadius: 10, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', marginRight: 14 },
+  info:        { flex: 1 },
+  entryTitle:  { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  entryAddress:{ fontSize: 13, marginBottom: 2 },
+  entryDate:   { fontSize: 12 },
 });
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const {
-    entries,
-    folders,
-    addEntry,
-    deleteEntry,
-    toggleFavorite,
-    moveToFolder,
-    createFolder,
-    deleteFolder,
+    entries, folders, addEntry, deleteEntry,
+    toggleFavorite, moveToFolder, createFolder, deleteFolder,
   } = useEntries();
 
   const [isLoggedIn,    setIsLoggedIn]    = useState(false);
@@ -185,18 +168,12 @@ export default function App() {
   const [selectedEntry, setSelectedEntry] = useState<TravelEntry | null>(null);
   const [openFolder,    setOpenFolder]    = useState<Folder | null>(null);
 
-  const handleSave = (entry: TravelEntry) => {
-    addEntry(entry);
-    setShowAddEntry(false);
-  };
-
-  const handleDelete = (id: string) => {
-    deleteEntry(id);
-    setSelectedEntry(null);
-  };
+  const handleSave = (entry: TravelEntry) => { addEntry(entry); setShowAddEntry(false); };
+  const handleDelete = (id: string) => { deleteEntry(id); setSelectedEntry(null); };
 
   const handleSelectEntry = (entry: TravelEntry) => {
     setShowSearch(false);
+    setOpenFolder(null);
     setSelectedEntry(entry);
   };
 
@@ -223,7 +200,8 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <View style={styles.root}>
-          {/* Main home */}
+
+          {/* ── Base: HomeScreen ── */}
           <HomeScreen
             entries={entries}
             folders={folders}
@@ -236,18 +214,23 @@ export default function App() {
             onLogout={handleLogout}
           />
 
-          {/* Search overlay */}
+          {/* ── Overlay: Search (no Modal = no white flash) ── */}
           {showSearch && (
             <View style={StyleSheet.absoluteFill}>
               <SearchScreen
                 entries={entries}
+                folders={folders}
                 onSelectEntry={handleSelectEntry}
+                onOpenFolder={(folder) => {
+                  setShowSearch(false);
+                  setOpenFolder(folder);
+                }}
                 onClose={() => setShowSearch(false)}
               />
             </View>
           )}
 
-          {/* Folders overlay */}
+          {/* ── Overlay: Folders list ── */}
           {showFolders && (
             <View style={StyleSheet.absoluteFill}>
               <FoldersScreen
@@ -263,9 +246,22 @@ export default function App() {
               />
             </View>
           )}
+
+          {/* ── Overlay: Folder contents (NO Modal = no white flash on back) ── */}
+          {openFolder && (
+            <View style={StyleSheet.absoluteFill}>
+              <FolderViewScreen
+                folder={openFolder}
+                entries={entries}
+                onSelectEntry={handleSelectEntry}
+                onClose={() => setOpenFolder(null)}
+              />
+            </View>
+          )}
+
         </View>
 
-        {/* Add Entry Sheet */}
+        {/* Add Entry — pageSheet is fine here (opening, not closing causes the flash) */}
         <Modal
           visible={showAddEntry}
           animationType="slide"
@@ -278,7 +274,7 @@ export default function App() {
           />
         </Modal>
 
-        {/* Entry Detail Sheet */}
+        {/* Entry Detail */}
         <Modal
           visible={!!selectedEntry}
           animationType="slide"
@@ -294,31 +290,9 @@ export default function App() {
           )}
         </Modal>
 
-        {/* Folder View Sheet — proper screen with back button */}
-        <Modal
-          visible={!!openFolder}
-          animationType="slide"
-          presentationStyle="pageSheet"
-          onRequestClose={() => setOpenFolder(null)}
-        >
-          {openFolder && (
-            <FolderViewScreen
-              folder={openFolder}
-              entries={entries}
-              onSelectEntry={(entry) => {
-                setOpenFolder(null);
-                handleSelectEntry(entry);
-              }}
-              onToggleFavorite={toggleFavorite}
-              onClose={() => setOpenFolder(null)}
-            />
-          )}
-        </Modal>
       </ThemeProvider>
     </SafeAreaProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-});
+const styles = StyleSheet.create({ root: { flex: 1 } });
