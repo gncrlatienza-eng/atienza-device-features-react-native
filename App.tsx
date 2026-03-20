@@ -59,7 +59,11 @@ function Root() {
   };
 
   if (!isLoggedIn) {
-    return <LoginScreen onLogin={() => setIsLoggedIn(true)} />;
+    return (
+      <View style={S.root}>
+        <LoginScreen onLogin={() => setIsLoggedIn(true)} />
+      </View>
+    );
   }
 
   return (
