@@ -69,7 +69,11 @@ export const homeScreenStyles = StyleSheet.create({
   scrollContent: { paddingTop: 8, paddingBottom: 160 },
 
   // ── Header ───────────────────────────────────────────────────────────────────
-  headerWrapper: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 12 },
+  headerWrapper: {
+    paddingTop:        60,
+    paddingHorizontal: 20,
+    paddingBottom:     12,
+  },
 
   headerTop: {
     flexDirection:  'row',
@@ -79,10 +83,10 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   headerTitle: {
-    fontSize:   34,
-    fontWeight: '700',
+    fontSize:      34,
+    fontWeight:    '700',
     letterSpacing: 0.37,
-    fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif',
+    fontFamily:    Platform.OS === 'ios' ? 'System' : 'sans-serif',
   },
 
   headerSubtitle: {
@@ -109,7 +113,7 @@ export const homeScreenStyles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ── Dropdown ──────────────────────────────────────────────────────────────────
+  // ── Profile Dropdown ──────────────────────────────────────────────────────────
   dropdownBackdrop: { ...StyleSheet.absoluteFillObject, zIndex: 10 },
 
   dropdownWrapper: {
@@ -127,11 +131,11 @@ export const homeScreenStyles = StyleSheet.create({
   dropdownBlur:     { paddingVertical: 8 },
 
   dropdownThemeRow: {
-    flexDirection: 'row',
-    alignItems:    'center',
+    flexDirection:     'row',
+    alignItems:        'center',
     paddingHorizontal: 16,
     paddingVertical:   13,
-    gap: 12,
+    gap:               12,
   },
 
   dropdownThemeLabel: {
@@ -142,29 +146,28 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   dropdownItem: {
-    flexDirection: 'row',
-    alignItems:    'center',
+    flexDirection:     'row',
+    alignItems:        'center',
     paddingHorizontal: 16,
     paddingVertical:   13,
-    gap: 12,
+    gap:               12,
   },
 
-  dropdownItemLabel: { fontSize: 15, fontWeight: '500', letterSpacing: -0.2 },
-
-  dropdownSeparator: { height: 0.5, marginHorizontal: 16 },
+  dropdownItemLabel:  { fontSize: 15, fontWeight: '500', letterSpacing: -0.2 },
+  dropdownSeparator:  { height: 0.5, marginHorizontal: 16 },
 
   toggleTrack: {
-    width:          44,
-    height:         26,
-    borderRadius:   13,
-    justifyContent: 'center',
+    width:             44,
+    height:            26,
+    borderRadius:      13,
+    justifyContent:    'center',
     paddingHorizontal: 3,
   },
 
   toggleThumb: {
-    width:        20,
-    height:       20,
-    borderRadius: 10,
+    width:           20,
+    height:          20,
+    borderRadius:    10,
     backgroundColor: '#FFFFFF',
     ...createShadow('#000', 0.20, 4, 2),
   },
@@ -181,7 +184,7 @@ export const homeScreenStyles = StyleSheet.create({
     ...createShadow('#000', 0.14, 20, 6),
   },
 
-  entryImage:   { ...StyleSheet.absoluteFillObject },
+  entryImage:       { ...StyleSheet.absoluteFillObject },
 
   entryPlaceholder: {
     ...StyleSheet.absoluteFillObject,
@@ -190,10 +193,10 @@ export const homeScreenStyles = StyleSheet.create({
   },
 
   entryOverlay: {
-    position: 'absolute',
-    bottom:   0,
-    left:     0,
-    right:    0,
+    position:          'absolute',
+    bottom:            0,
+    left:              0,
+    right:             0,
     paddingHorizontal: 16,
     paddingVertical:   14,
     borderTopWidth:    0.5,
@@ -249,11 +252,11 @@ export const homeScreenStyles = StyleSheet.create({
 
   // ── Section Title ─────────────────────────────────────────────────────────────
   sectionTitle: {
-    fontSize:      22,
-    fontWeight:    '700',
-    letterSpacing: 0.35,
-    marginTop:     24,
-    marginBottom:  12,
+    fontSize:          22,
+    fontWeight:        '700',
+    letterSpacing:     0.35,
+    marginTop:         24,
+    marginBottom:      12,
     paddingHorizontal: 20,
   },
 
@@ -271,8 +274,8 @@ export const homeScreenStyles = StyleSheet.create({
 
   // ── Empty State ───────────────────────────────────────────────────────────────
   emptyContainer: {
-    alignItems:     'center',
-    paddingTop:     80,
+    alignItems:        'center',
+    paddingTop:        80,
     paddingHorizontal: 40,
   },
 
@@ -289,18 +292,6 @@ export const homeScreenStyles = StyleSheet.create({
   emptyTitle:    { fontSize: 22, fontWeight: '700', textAlign: 'center', marginBottom: 10, letterSpacing: 0.2 },
   emptyBody:     { fontSize: 15, textAlign: 'center', lineHeight: 22, opacity: 0.50, marginBottom: 32 },
 
-  // ── Search Bar ────────────────────────────────────────────────────────────────
-  searchWrapper: {
-    marginHorizontal: 16,
-    marginBottom:     12,
-    borderRadius:     14,
-    overflow:         'hidden',
-    borderWidth:      StyleSheet.hairlineWidth,
-  },
-
-  searchBlur:  { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 11, gap: 8 },
-  searchInput: { flex: 1, fontSize: 15, fontWeight: '400' },
-
   // ── Floating Capsule Nav ──────────────────────────────────────────────────────
   navWrapper: {
     position:     'absolute',
@@ -311,17 +302,59 @@ export const homeScreenStyles = StyleSheet.create({
     ...createShadow('#000', 0.10, 28, 6),
   },
 
-  navBlur: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 6, paddingVertical: 6 },
+  navBlur: {
+    flexDirection:     'row',
+    alignItems:        'center',
+    paddingHorizontal: 6,
+    paddingVertical:   6,
+  },
 
-  navItemWrapper: { alignItems: 'center', justifyContent: 'center', width: 72, paddingVertical: 4 },
+  navItemWrapper: {
+    alignItems:     'center',
+    justifyContent: 'center',
+    width:          72,
+    paddingVertical: 4,
+  },
 
-  navIconButton: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  navIconButton: {
+    width:          40,
+    height:         40,
+    borderRadius:   20,
+    alignItems:     'center',
+    justifyContent: 'center',
+    overflow:       'hidden',
+  },
 
-  navLabel: { fontSize: 10, fontWeight: '500', marginTop: 2, letterSpacing: 0.1 },
+  navLabel: {
+    fontSize:      10,
+    fontWeight:    '500',
+    marginTop:     2,
+    letterSpacing: 0.1,
+  },
 
-  plusButton: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', borderWidth: 0.5, alignItems: 'center', justifyContent: 'center' },
+  plusButton: {
+    width:          40,
+    height:         40,
+    borderRadius:   20,
+    overflow:       'hidden',
+    borderWidth:    0.5,
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
 
-  plusBlur: { flex: 1, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  plusBlur: {
+    flex:           1,
+    width:          '100%',
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
 
-  searchNavButton: { width: 40, height: 40, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  searchNavButton: {
+    width:          40,
+    height:         40,
+    borderRadius:   20,
+    overflow:       'hidden',
+    alignItems:     'center',
+    justifyContent: 'center',
+  },
 });

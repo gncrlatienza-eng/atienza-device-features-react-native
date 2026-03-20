@@ -6,11 +6,14 @@ import { useEntries } from './src/hooks/useEntries';
 import HomeScreen from './src/screens/HomeScreen';
 import AddEntryScreen from './src/screens/AddEntryScreen';
 import EntryDetailScreen from './src/screens/EntryDetailScreen';
+import SearchScreen from './src/screens/SearchScreen';
 import type { TravelEntry } from './src/hooks/useEntries';
 
 export default function App() {
   const { entries, addEntry, deleteEntry, toggleFavorite } = useEntries();
+
   const [showAddEntry,  setShowAddEntry]  = useState(false);
+  const [showSearch,    setShowSearch]    = useState(false);
   const [selectedEntry, setSelectedEntry] = useState<TravelEntry | null>(null);
 
   const handleSave = (entry: TravelEntry) => {
@@ -23,17 +26,24 @@ export default function App() {
     setSelectedEntry(null);
   };
 
+  const handleSelectEntry = (entry: TravelEntry) => {
+    setShowSearch(false);
+    setSelectedEntry(entry);
+  };
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>
         <HomeScreen
           entries={entries}
           onAddEntry={() => setShowAddEntry(true)}
-          onSelectEntry={(entry) => setSelectedEntry(entry)}
+          onSelectEntry={handleSelectEntry}
           onToggleFavorite={toggleFavorite}
+          onSearchPress={() => setShowSearch(true)}
           onLogout={() => console.log('Logged out')}
         />
 
+        {/* Add Entry Sheet */}
         <Modal
           visible={showAddEntry}
           animationType="slide"
@@ -46,6 +56,7 @@ export default function App() {
           />
         </Modal>
 
+        {/* Entry Detail Sheet */}
         <Modal
           visible={!!selectedEntry}
           animationType="slide"
@@ -59,6 +70,20 @@ export default function App() {
               onDelete={handleDelete}
             />
           )}
+        </Modal>
+
+        {/* Search — full screen */}
+        <Modal
+          visible={showSearch}
+          animationType="fade"
+          presentationStyle="fullScreen"
+          onRequestClose={() => setShowSearch(false)}
+        >
+          <SearchScreen
+            entries={entries}
+            onSelectEntry={handleSelectEntry}
+            onClose={() => setShowSearch(false)}
+          />
         </Modal>
       </ThemeProvider>
     </SafeAreaProvider>
