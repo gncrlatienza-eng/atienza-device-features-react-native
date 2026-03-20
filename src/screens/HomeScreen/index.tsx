@@ -273,14 +273,36 @@ const EntryCard: React.FC<{
   onMenuPress: () => void;
 }> = ({ item, scheme, onPress, onMenuPress }) => {
   const { scale, onPressIn, onPressOut } = usePressAnimation(0.97);
-  const tokens = glassTokens[scheme];
+  const tokens   = glassTokens[scheme];
+  const startX   = useRef(0);
+  const startY   = useRef(0);
+  // Track whether press-in animation actually fired (only after delay)
+  const pressActivated = useRef(false);
+
+  const handlePressIn = (e: any) => {
+    startX.current       = e.nativeEvent.pageX;
+    startY.current       = e.nativeEvent.pageY;
+    pressActivated.current = true;
+    onPressIn();
+  };
+
+  const handlePressOut = (e: any) => {
+    if (!pressActivated.current) return;
+    pressActivated.current = false;
+    const dx = Math.abs(e.nativeEvent.pageX - startX.current);
+    const dy = Math.abs(e.nativeEvent.pageY - startY.current);
+    // 20px vertical, 15px horizontal — generous enough to catch real swipes
+    const isScroll = dy > 20 || dx > 15;
+    onPressOut(isScroll ? undefined : onPress);
+  };
 
   return (
     <Animated.View style={[S.entryCard, { transform: [{ scale }], borderColor: tokens.border }]}>
       <TouchableOpacity
         activeOpacity={1}
-        onPressIn={onPressIn}
-        onPressOut={() => onPressOut(onPress)}
+        delayPressIn={80}          // finger must rest 80ms before tap activates
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
         style={StyleSheet.absoluteFill}
       >
         {item.imageUri ? (
@@ -441,7 +463,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
 
       <ScrollView
-        contentContainerStyle={[S.scrollContent, { paddingBottom: insets.bottom + 100 }]}
+        contentContainerStyle={[S.scrollContent, { paddingBottom: insets.bottom + 140 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
