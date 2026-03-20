@@ -8,6 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
+import { Audio } from 'expo-av';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { glassTokens, palette, ColorScheme } from '../HomeScreen/HomeScreen.styles';
@@ -15,13 +16,13 @@ import { addEntryStyles as S } from './AddEntryScreen.styles';
 import { ConfirmSaveModal } from '../EntryDetailScreen';
 import type { TravelEntry } from '../../hooks/useEntries';
 
-// ─── Notifications ────────────────────────────────────────────────────────────
+// ─── Notifications handler ────────────────────────────────────────────────────
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert:  true,
     shouldShowBanner: true,
     shouldShowList:   true,
-    shouldPlaySound:  true,
+    shouldPlaySound:  false,   // we play sound ourselves via expo-av
     shouldSetBadge:   false,
   }),
 });
@@ -42,6 +43,33 @@ const usePressAnimation = (toValue = 0.96) => {
   const onPressOut = (cb?: () => void) => Animated.spring(scale, spring(1)).start(() => cb?.());
   return { scale, onPressIn, onPressOut };
 };
+
+// ─── Helper: play a success sound using expo-av ───────────────────────────────
+async function playSuccessSound() {
+  try {
+    // Set audio mode so sound plays even when device is on silent
+    await Audio.setAudioModeAsync({
+      playsInSilentModeIOS:  true,
+      allowsRecordingIOS:    false,
+      staysActiveInBackground: false,
+    });
+
+    const { sound } = await Audio.Sound.createAsync(
+      // Built-in system sound via URI — works without bundling an asset file
+      { uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' },
+      { shouldPlay: true, volume: 1.0 },
+    );
+
+    // Unload after it finishes to free memory
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync();
+      }
+    });
+  } catch {
+    // Sound is non-critical — fail silently, haptic still fires
+  }
+}
 
 // ─── Screen: AddEntryScreen ───────────────────────────────────────────────────
 const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => {
@@ -64,7 +92,12 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
   const [cameraPermission, requestCamera] = useCameraPermissions();
   const { scale, onPressIn, onPressOut }  = usePressAnimation(0.97);
 
-  // ── Clear state on unmount (back without saving) ────────────────────────
+  // Request notification permission early so it doesn't interrupt the save flow
+  useEffect(() => {
+    Notifications.requestPermissionsAsync();
+  }, []);
+
+  // Clear state on unmount
   useEffect(() => {
     return () => {
       setImageUri(null);
@@ -75,7 +108,7 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     };
   }, []);
 
-  // ── Reverse geocode from current position ───────────────────────────────
+  // ── Reverse geocode ───────────────────────────────────────────────────────
   const fetchLocation = useCallback(async () => {
     setLocationStatus('fetching');
     try {
@@ -85,8 +118,11 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
         setAddress('Location permission denied');
         return;
       }
-      const coords    = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const [result]  = await Location.reverseGeocodeAsync({ latitude: coords.coords.latitude, longitude: coords.coords.longitude });
+      const coords   = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [result] = await Location.reverseGeocodeAsync({
+        latitude:  coords.coords.latitude,
+        longitude: coords.coords.longitude,
+      });
       if (result) {
         const parts = [result.name, result.city, result.region, result.country].filter(Boolean);
         setAddress(parts.join(', '));
@@ -101,7 +137,6 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     }
   }, []);
 
-  // ── When image is set, auto-fetch location ──────────────────────────────
   const handleImageSelected = useCallback((uri: string) => {
     setImageUri(uri);
     fetchLocation();
@@ -129,7 +164,10 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     } catch { setShowCamera(false); }
   };
 
-  const toggleFacing = () => { Haptics.selectionAsync(); setFacing((p) => (p === 'back' ? 'front' : 'back')); };
+  const toggleFacing = () => {
+    Haptics.selectionAsync();
+    setFacing((p) => (p === 'back' ? 'front' : 'back'));
+  };
 
   // ── Gallery picker ────────────────────────────────────────────────────────
   const handlePickFromGallery = async () => {
@@ -148,10 +186,9 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     }
   };
 
-  // ── Show action sheet for camera vs gallery ────────────────────────────
   const handleAddPhoto = () => {
     Alert.alert('Add Photo', 'Choose a source', [
-      { text: 'Camera',       onPress: handleOpenCamera     },
+      { text: 'Camera',        onPress: handleOpenCamera      },
       { text: 'Photo Library', onPress: handlePickFromGallery },
       { text: 'Cancel', style: 'cancel' },
     ]);
@@ -160,6 +197,7 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
   // ── Save ──────────────────────────────────────────────────────────────────
   const handleConfirmSave = async () => {
     if (!imageUri) return;
+
     const entry: TravelEntry = {
       id:         Date.now().toString(),
       imageUri,
@@ -170,13 +208,24 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
       isFavorite: false,
     };
 
-    const { status } = await Notifications.requestPermissionsAsync();
+    // 1. Play sound (expo-av — reliable, plays on silent mode)
+    playSuccessSound();
+
+    // 2. Strong haptic
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+
+    // 3. Show notification banner (visual only, sound handled above)
+    const { status } = await Notifications.getPermissionsAsync();
     if (status === 'granted') {
       await Notifications.scheduleNotificationAsync({
-        content: { title: '✈️ Memory Saved!', body: `"${entry.title}" has been added to your Travel Diary.` },
+        content: {
+          title: '✈️ Memory Saved!',
+          body:  `"${entry.title}" has been added to your Travel Diary.`,
+        },
         trigger: null,
       });
     }
+
     onSave(entry);
   };
 
@@ -237,7 +286,7 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
           keyboardShouldPersistTaps="handled"
         >
           {/* Image picker */}
-          <TouchableOpacity onPress={imageUri ? handleAddPhoto : handleAddPhoto} activeOpacity={0.9}>
+          <TouchableOpacity onPress={handleAddPhoto} activeOpacity={0.9}>
             <BlurView intensity={50} tint={tokens.tint} style={[S.imagePickerWrapper, { borderColor: tokens.border }]}>
               {imageUri ? (
                 <>
@@ -253,7 +302,7 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
                 <View style={S.imagePickerBlur}>
                   <Ionicons name="camera" size={36} color={colors.tertiaryLabel} />
                   <Text style={[S.imagePickerLabel, { color: colors.tertiaryLabel }]}>Tap to add a photo</Text>
-                  <Text style={[S.imagePickerSub, { color: colors.tertiaryLabel }]}>Camera or Photo Library</Text>
+                  <Text style={[S.imagePickerSub,   { color: colors.tertiaryLabel }]}>Camera or Photo Library</Text>
                 </View>
               )}
             </BlurView>
@@ -329,14 +378,21 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
       </KeyboardAvoidingView>
 
       {/* Save Button */}
-      <View style={[S.saveWrapper, { paddingBottom: insets.bottom + 12, borderTopColor: tokens.border, backgroundColor: colors.systemBackground }]}>
+      <View style={[S.saveWrapper, {
+        paddingBottom:   insets.bottom + 12,
+        borderTopColor:  tokens.border,
+        backgroundColor: colors.systemBackground,
+      }]}>
         <Animated.View style={[S.saveBlur, { transform: [{ scale }], opacity: canSave ? 1 : 0.4 }]}>
           <TouchableOpacity
             style={[S.saveButton, { backgroundColor: colors.accent }]}
             activeOpacity={0.9}
             disabled={!canSave}
             onPressIn={onPressIn}
-            onPressOut={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPressOut(() => setShowSaveModal(true)); }}
+            onPressOut={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              onPressOut(() => setShowSaveModal(true));
+            }}
           >
             <Text style={S.saveLabel}>Save Memory</Text>
           </TouchableOpacity>
@@ -354,9 +410,17 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
 };
 
 const cameraStyles = StyleSheet.create({
-  controlButton: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.25)' },
-  shutterOuter:  { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
-  shutterInner:  { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF' },
+  controlButton: {
+    width: 38, height: 38, borderRadius: 19, overflow: 'hidden',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.25)',
+  },
+  shutterOuter: {
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 3, borderColor: '#FFFFFF',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shutterInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF' },
 });
 
 export default AddEntryScreen;
