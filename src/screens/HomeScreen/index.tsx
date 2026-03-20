@@ -1,29 +1,12 @@
 import React, { useRef, useState } from 'react';
-import {
-  Animated,
-  Image,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  TouchableWithoutFeedback,
-  UIManager,
-  View,
-} from 'react-native';
+import { Animated, Image, Modal, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, UIManager, View, } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
-import {
-  ColorScheme,
-  glassTokens,
-  homeScreenStyles as S,
-  palette,
-} from './HomeScreen.styles';
+import { ColorScheme, glassTokens, homeScreenStyles as S, palette, } from './HomeScreen.styles';
 import type { TravelEntry, Folder } from '../../hooks/useEntries';
 
 export type { TravelEntry };
@@ -40,6 +23,7 @@ interface HomeScreenProps {
   onSelectEntry:    (entry: TravelEntry) => void;
   onToggleFavorite: (id: string) => void;
   onMoveToFolder:   (entryId: string, folderId: string | undefined) => void;
+  onDeleteEntry:    (id: string) => void;
   onLogout:         () => void;
 }
 
@@ -436,7 +420,7 @@ const ProfileDropdown: React.FC<{
 // ─── Screen: HomeScreen ───────────────────────────────────────────────────────
 const HomeScreen: React.FC<HomeScreenProps> = ({
   entries, folders,
-  onAddEntry, onSelectEntry, onToggleFavorite, onMoveToFolder, onLogout,
+  onAddEntry, onSelectEntry, onToggleFavorite, onMoveToFolder, onDeleteEntry, onLogout,
 }) => {
   const { resolvedScheme }  = useTheme();
   const scheme: ColorScheme = resolvedScheme;
@@ -446,6 +430,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
   const [showDropdown,        setShowDropdown]        = useState(false);
   const [contextEntry,        setContextEntry]        = useState<TravelEntry | null>(null);
   const [confirmFav,          setConfirmFav]          = useState<TravelEntry | null>(null);
+  const [confirmDelete,       setConfirmDelete]       = useState<TravelEntry | null>(null);
   const [confirmRemoveFolder, setConfirmRemoveFolder] = useState<TravelEntry | null>(null);
   const [folderPickEntry,     setFolderPickEntry]     = useState<TravelEntry | null>(null);
 
@@ -516,7 +501,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           onFavorite={() => setConfirmFav(contextEntry)}
           onAddToFolder={() => { setFolderPickEntry(contextEntry); setContextEntry(null); }}
           onRemoveFolder={() => setConfirmRemoveFolder(contextEntry)}
-          onDelete={() => setContextEntry(null)}
+          onDelete={() => { setConfirmDelete(contextEntry); setContextEntry(null); }}
         />
       )}
 
@@ -563,6 +548,24 @@ const HomeScreen: React.FC<HomeScreenProps> = ({
           if (confirmRemoveFolder) onMoveToFolder(confirmRemoveFolder.id, undefined);
           setConfirmRemoveFolder(null);
           setContextEntry(null);
+        }}
+      />
+
+      {/* Confirm Delete Memory */}
+      <ConfirmModal
+        visible={!!confirmDelete}
+        title="Delete Memory?"
+        body={`"${confirmDelete?.title || confirmDelete?.address.split(',')[0]}" will be permanently deleted and cannot be recovered.`}
+        iconName="trash-outline"
+        iconColor={palette[scheme].destructive}
+        iconBg="rgba(255,59,48,0.10)"
+        confirmLabel="Delete"
+        confirmColor={palette[scheme].destructive}
+        scheme={scheme}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => {
+          if (confirmDelete) onDeleteEntry(confirmDelete.id);
+          setConfirmDelete(null);
         }}
       />
     </View>

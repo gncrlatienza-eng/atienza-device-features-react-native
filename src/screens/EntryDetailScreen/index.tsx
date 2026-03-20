@@ -1,14 +1,5 @@
 import React, { useRef, useState } from 'react';
-import {
-  Animated,
-  Image,
-  Modal,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View, } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';

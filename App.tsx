@@ -73,6 +73,7 @@ function Root() {
         onSelectEntry={handleSelectEntry}
         onToggleFavorite={toggleFavorite}
         onMoveToFolder={moveToFolder}
+        onDeleteEntry={deleteEntry}
         onLogout={() => setConfirmLogout(true)}
       />
 

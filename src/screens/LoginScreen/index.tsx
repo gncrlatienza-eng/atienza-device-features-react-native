@@ -1,13 +1,5 @@
 import React, { useRef, useState } from 'react';
-import {
-  Animated,
-  KeyboardAvoidingView,
-  Platform,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Animated, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View, } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
