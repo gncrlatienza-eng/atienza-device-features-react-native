@@ -2,22 +2,24 @@ import React, { useState } from 'react';
 import { Modal } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider } from './src/context/ThemeContext';
-import HomeScreen, { TravelEntry } from './src/screens/HomeScreen';
+import { useEntries } from './src/hooks/useEntries';
+import HomeScreen from './src/screens/HomeScreen';
 import AddEntryScreen from './src/screens/AddEntryScreen';
 import EntryDetailScreen from './src/screens/EntryDetailScreen';
+import type { TravelEntry } from './src/hooks/useEntries';
 
 export default function App() {
-  const [entries,       setEntries]       = useState<(TravelEntry & { note?: string })[]>([]);
+  const { entries, addEntry, deleteEntry, toggleFavorite } = useEntries();
   const [showAddEntry,  setShowAddEntry]  = useState(false);
-  const [selectedEntry, setSelectedEntry] = useState<(TravelEntry & { note?: string }) | null>(null);
+  const [selectedEntry, setSelectedEntry] = useState<TravelEntry | null>(null);
 
-  const handleSave = (entry: TravelEntry & { note?: string }) => {
-    setEntries((prev) => [entry, ...prev]);
+  const handleSave = (entry: TravelEntry) => {
+    addEntry(entry);
     setShowAddEntry(false);
   };
 
   const handleDelete = (id: string) => {
-    setEntries((prev) => prev.filter((e) => e.id !== id));
+    deleteEntry(id);
     setSelectedEntry(null);
   };
 
@@ -28,6 +30,7 @@ export default function App() {
           entries={entries}
           onAddEntry={() => setShowAddEntry(true)}
           onSelectEntry={(entry) => setSelectedEntry(entry)}
+          onToggleFavorite={toggleFavorite}
           onLogout={() => console.log('Logged out')}
         />
 

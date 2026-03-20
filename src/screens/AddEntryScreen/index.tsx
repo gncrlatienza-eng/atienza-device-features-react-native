@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Image,
   KeyboardAvoidingView,
@@ -16,6 +17,7 @@ import { BlurView } from 'expo-blur';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
@@ -24,9 +26,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { glassTokens, palette, ColorScheme } from '../HomeScreen/HomeScreen.styles';
 import { addEntryStyles as S } from './AddEntryScreen.styles';
 import { ConfirmSaveModal } from '../EntryDetailScreen';
-import type { TravelEntry } from '../HomeScreen';
+import type { TravelEntry } from '../../hooks/useEntries';
 
-// ─── Notifications Setup ──────────────────────────────────────────────────────
+// ─── Notifications ────────────────────────────────────────────────────────────
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert:  true,
@@ -39,7 +41,7 @@ Notifications.setNotificationHandler({
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface AddEntryScreenProps {
-  onSave:   (entry: TravelEntry & { note?: string }) => void;
+  onSave:   (entry: TravelEntry) => void;
   onCancel: () => void;
 }
 
@@ -63,6 +65,7 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
   const insets              = useSafeAreaInsets();
 
   const [imageUri,       setImageUri]       = useState<string | null>(null);
+  const [title,          setTitle]          = useState('');
   const [address,        setAddress]        = useState('');
   const [note,           setNote]           = useState('');
   const [showCamera,     setShowCamera]     = useState(false);
@@ -74,18 +77,18 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
   const [cameraPermission, requestCamera] = useCameraPermissions();
   const { scale, onPressIn, onPressOut }  = usePressAnimation(0.97);
 
-  // ── Clear state on unmount ────────────────────────────────────────────────
+  // ── Clear state on unmount (back without saving) ────────────────────────
   useEffect(() => {
     return () => {
       setImageUri(null);
+      setTitle('');
       setAddress('');
       setNote('');
       setLocationStatus('idle');
     };
   }, []);
 
-  useEffect(() => { fetchLocation(); }, []);
-
+  // ── Reverse geocode from current position ───────────────────────────────
   const fetchLocation = useCallback(async () => {
     setLocationStatus('fetching');
     try {
@@ -95,11 +98,8 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
         setAddress('Location permission denied');
         return;
       }
-      const coords = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-      const [result] = await Location.reverseGeocodeAsync({
-        latitude:  coords.coords.latitude,
-        longitude: coords.coords.longitude,
-      });
+      const coords    = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const [result]  = await Location.reverseGeocodeAsync({ latitude: coords.coords.latitude, longitude: coords.coords.longitude });
       if (result) {
         const parts = [result.name, result.city, result.region, result.country].filter(Boolean);
         setAddress(parts.join(', '));
@@ -114,10 +114,20 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     }
   }, []);
 
+  // ── When image is set, auto-fetch location ──────────────────────────────
+  const handleImageSelected = useCallback((uri: string) => {
+    setImageUri(uri);
+    fetchLocation();
+  }, [fetchLocation]);
+
+  // ── Camera ────────────────────────────────────────────────────────────────
   const handleOpenCamera = async () => {
     if (!cameraPermission?.granted) {
       const { granted } = await requestCamera();
-      if (!granted) return;
+      if (!granted) {
+        Alert.alert('Camera Access', 'Please allow camera access in Settings to take photos.');
+        return;
+      }
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowCamera(true);
@@ -128,26 +138,55 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
-      if (photo?.uri) { setImageUri(photo.uri); setShowCamera(false); }
+      if (photo?.uri) { handleImageSelected(photo.uri); setShowCamera(false); }
     } catch { setShowCamera(false); }
   };
 
-  const toggleFacing = () => {
-    Haptics.selectionAsync();
-    setFacing((prev) => (prev === 'back' ? 'front' : 'back'));
+  const toggleFacing = () => { Haptics.selectionAsync(); setFacing((p) => (p === 'back' ? 'front' : 'back')); };
+
+  // ── Gallery picker ────────────────────────────────────────────────────────
+  const handlePickFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Photo Library', 'Please allow photo library access in Settings.');
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality:    0.8,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      handleImageSelected(result.assets[0].uri);
+    }
   };
 
+  // ── Show action sheet for camera vs gallery ────────────────────────────
+  const handleAddPhoto = () => {
+    Alert.alert('Add Photo', 'Choose a source', [
+      { text: 'Camera',       onPress: handleOpenCamera     },
+      { text: 'Photo Library', onPress: handlePickFromGallery },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleConfirmSave = async () => {
     if (!imageUri) return;
-    const entry = {
-      id: Date.now().toString(), imageUri,
-      address: address || 'Unknown location',
-      timestamp: Date.now(), note,
+    const entry: TravelEntry = {
+      id:         Date.now().toString(),
+      imageUri,
+      title:      title.trim() || address.split(',')[0] || 'Untitled',
+      address:    address || 'Unknown location',
+      timestamp:  Date.now(),
+      note,
+      isFavorite: false,
     };
+
     const { status } = await Notifications.requestPermissionsAsync();
     if (status === 'granted') {
       await Notifications.scheduleNotificationAsync({
-        content: { title: '✈️ Memory Saved!', body: `Your memory at ${entry.address} has been added.` },
+        content: { title: '✈️ Memory Saved!', body: `"${entry.title}" has been added to your Travel Diary.` },
         trigger: null,
       });
     }
@@ -163,24 +202,22 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
         <StatusBar style="light" />
         <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing={facing} />
         <View style={[StyleSheet.absoluteFill, { justifyContent: 'space-between', paddingBottom: insets.bottom + 24 }]}>
-          {/* Top: close + flip */}
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingTop: insets.top + 12, paddingHorizontal: 20 }}>
             <TouchableOpacity onPress={() => setShowCamera(false)} activeOpacity={0.8}>
-              <BlurView intensity={60} tint="dark" style={{ width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.25)' }}>
+              <BlurView intensity={60} tint="dark" style={cameraStyles.controlButton}>
                 <Ionicons name="close" size={20} color="#FFFFFF" />
               </BlurView>
             </TouchableOpacity>
             <TouchableOpacity onPress={toggleFacing} activeOpacity={0.8}>
-              <BlurView intensity={60} tint="dark" style={{ width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.25)' }}>
+              <BlurView intensity={60} tint="dark" style={cameraStyles.controlButton}>
                 <Ionicons name="camera-reverse-outline" size={20} color="#FFFFFF" />
               </BlurView>
             </TouchableOpacity>
           </View>
-          {/* Shutter */}
           <View style={{ alignItems: 'center' }}>
             <TouchableOpacity onPress={handleCapture} activeOpacity={0.8}>
-              <View style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
-                <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF' }} />
+              <View style={cameraStyles.shutterOuter}>
+                <View style={cameraStyles.shutterInner} />
               </View>
             </TouchableOpacity>
           </View>
@@ -193,8 +230,8 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
   return (
     <View style={[S.container, { backgroundColor: colors.systemBackground }]}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
 
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={S.handleWrapper}>
           <View style={[S.handle, { backgroundColor: colors.tertiaryLabel, opacity: 0.4 }]} />
         </View>
@@ -213,7 +250,7 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
           keyboardShouldPersistTaps="handled"
         >
           {/* Image picker */}
-          <TouchableOpacity onPress={imageUri ? () => setImageUri(null) : handleOpenCamera} activeOpacity={0.9}>
+          <TouchableOpacity onPress={imageUri ? handleAddPhoto : handleAddPhoto} activeOpacity={0.9}>
             <BlurView intensity={50} tint={tokens.tint} style={[S.imagePickerWrapper, { borderColor: tokens.border }]}>
               {imageUri ? (
                 <>
@@ -221,24 +258,47 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
                   <BlurView intensity={60} tint="dark" style={[S.retakeOverlay, { borderColor: 'rgba(255,255,255,0.25)' }]}>
                     <View style={S.retakeBlur}>
                       <Ionicons name="camera" size={13} color="#FFFFFF" />
-                      <Text style={S.retakeLabel}>Retake</Text>
+                      <Text style={S.retakeLabel}>Change Photo</Text>
                     </View>
                   </BlurView>
                 </>
               ) : (
                 <View style={S.imagePickerBlur}>
                   <Ionicons name="camera" size={36} color={colors.tertiaryLabel} />
-                  <Text style={[S.imagePickerLabel, { color: colors.tertiaryLabel }]}>Tap to capture a photo</Text>
+                  <Text style={[S.imagePickerLabel, { color: colors.tertiaryLabel }]}>Tap to add a photo</Text>
+                  <Text style={[S.imagePickerSub, { color: colors.tertiaryLabel }]}>Camera or Photo Library</Text>
                 </View>
               )}
             </BlurView>
           </TouchableOpacity>
 
+          {/* Title input */}
+          <BlurView intensity={50} tint={tokens.tint} style={[S.sectionCard, { borderColor: tokens.border }]}>
+            <View style={S.sectionCardBlur}>
+              <View style={S.sectionRow}>
+                <Ionicons name="pencil" size={18} color={colors.tertiaryLabel} />
+                <TextInput
+                  style={[S.titleInput, { color: colors.label }]}
+                  placeholder="Entry title (optional)"
+                  placeholderTextColor={colors.tertiaryLabel}
+                  value={title}
+                  onChangeText={setTitle}
+                  maxLength={60}
+                  returnKeyType="done"
+                />
+              </View>
+            </View>
+          </BlurView>
+
           {/* Location card */}
           <BlurView intensity={50} tint={tokens.tint} style={[S.sectionCard, { borderColor: tokens.border }]}>
             <View style={S.sectionCardBlur}>
               <View style={S.sectionRow}>
-                <Ionicons name="location" size={18} color={locationStatus === 'success' ? colors.accent : colors.tertiaryLabel} />
+                <Ionicons
+                  name="location"
+                  size={18}
+                  color={locationStatus === 'success' ? colors.accent : colors.tertiaryLabel}
+                />
                 <Text style={[S.sectionLabel, { color: colors.label }]}>Location</Text>
                 {locationStatus === 'fetching' ? (
                   <ActivityIndicator size="small" color={colors.tertiaryLabel} />
@@ -251,14 +311,19 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
               {address !== '' && (
                 <Text style={[S.sectionValue, { color: colors.label }]}>{address}</Text>
               )}
+              {locationStatus === 'idle' && address === '' && (
+                <Text style={[S.sectionValue, { color: colors.tertiaryLabel }]}>
+                  Location will be fetched after adding a photo.
+                </Text>
+              )}
             </View>
           </BlurView>
 
-          {/* Note card */}
+          {/* Note input */}
           <BlurView intensity={50} tint={tokens.tint} style={[S.sectionCard, { borderColor: tokens.border }]}>
             <View style={S.sectionCardBlur}>
               <View style={S.sectionRow}>
-                <Ionicons name="pencil" size={18} color={colors.tertiaryLabel} />
+                <Ionicons name="create-outline" size={18} color={colors.tertiaryLabel} />
                 <Text style={[S.sectionLabel, { color: colors.label }]}>Note</Text>
               </View>
               <View style={[S.sectionDivider, { backgroundColor: colors.separator, marginTop: 10 }]} />
@@ -300,5 +365,11 @@ const AddEntryScreen: React.FC<AddEntryScreenProps> = ({ onSave, onCancel }) => 
     </View>
   );
 };
+
+const cameraStyles = StyleSheet.create({
+  controlButton: { width: 38, height: 38, borderRadius: 19, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.25)' },
+  shutterOuter:  { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  shutterInner:  { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF' },
+});
 
 export default AddEntryScreen;
