@@ -11,10 +11,10 @@ import { useColorScheme } from 'react-native';
 type ThemeMode = 'light' | 'dark' | 'system';
 
 interface ThemeContextValue {
-  mode: ThemeMode;
+  mode:           ThemeMode;
   resolvedScheme: 'light' | 'dark';
-  setMode: (mode: ThemeMode) => void;
-  toggleTheme: () => void;
+  setMode:        (mode: ThemeMode) => void;
+  toggleTheme:    () => void;
 }
 
 // ─── Context ──────────────────────────────────────────────────────────────────
@@ -22,11 +22,14 @@ const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const systemScheme = useColorScheme();
+  const systemScheme = useColorScheme(); // can be null on first render
   const [mode, setMode] = useState<ThemeMode>('system');
 
   const resolvedScheme = useMemo((): 'light' | 'dark' => {
-    if (mode === 'system') return systemScheme === 'dark' ? 'dark' : 'light';
+    if (mode === 'system') {
+      // Guard against null — default to light
+      return systemScheme === 'dark' ? 'dark' : 'light';
+    }
     return mode;
   }, [mode, systemScheme]);
 
