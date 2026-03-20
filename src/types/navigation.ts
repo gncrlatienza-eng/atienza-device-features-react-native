@@ -1,0 +1,1 @@
+export type ActiveScreen = 'home' | 'folders' | 'folderView' | 'search';
